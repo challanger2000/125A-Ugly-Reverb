@@ -49,7 +49,7 @@ double difference(const std::vector<float>& a, const std::vector<float>& b)
 }
 
 RenderResult render(double sr, double seconds, float material, float preDelay, float digital,
-                    bool bypass=false, bool impulse=true, int block=128)
+                    bool bypass=false, bool impulse=true, int block=128, float decay=0.58f)
 {
     block = std::max(1, block);
     Processor p;
@@ -69,6 +69,7 @@ RenderResult render(double sr, double seconds, float material, float preDelay, f
     p.setTestParameter(UglyReverb::kMaterial, material);
     p.setTestParameter(UglyReverb::kPreDelay, preDelay);
     p.setTestParameter(UglyReverb::kDigital, digital);
+    p.setTestParameter(UglyReverb::kDecay, decay);
     p.setTestParameter(UglyReverb::kMix, bypass ? 0.28f : 1.f);
     p.setTestParameter(UglyReverb::kOutput, 0.5f);
     p.setTestParameter(UglyReverb::kBypass, bypass ? 1.f : 0.f);
@@ -183,6 +184,12 @@ int main()
         auto tank=render(48000.0,1.5,1.f,0.f,0.f);
         require(difference(plate.left,steel.left) > 1e-5, "Plate differs from Steel", failures);
         require(difference(steel.left,tank.left) > 1e-5, "Steel differs from Tank", failures);
+
+        auto shortDecay=render(48000.0,3.0,0.5f,0.f,0.f,false,true,128,0.15f);
+        auto longDecay=render(48000.0,3.0,0.5f,0.f,0.f,false,true,128,0.90f);
+        const double shortLate=energy(shortDecay.left,(size_t)(48000.0*1.5),shortDecay.left.size());
+        const double longLate=energy(longDecay.left,(size_t)(48000.0*1.5),longDecay.left.size());
+        require(longLate > shortLate * 10.0, "Decay control increases late-tail energy", failures);
 
         auto clean=render(48000.0,1.5,0.5f,0.f,0.f);
         auto bit12=render(48000.0,1.5,0.5f,0.f,0.5f);
