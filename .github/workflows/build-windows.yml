@@ -1,0 +1,50 @@
+name: Build Windows VST3
+
+on:
+  push:
+    branches:
+      - development
+    paths:
+      - "CMakeLists.txt"
+      - "source/**"
+      - ".github/workflows/build-windows.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build Release
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --target UglyReverb --parallel
+
+      - name: Collect VST3
+        shell: pwsh
+        run: |
+          $plugin = Get-ChildItem -Path build -Recurse -Directory -Filter "UglyReverb.vst3" | Select-Object -First 1
+          if (-not $plugin) {
+            Write-Error "UglyReverb.vst3 was not found after build."
+            exit 1
+          }
+          New-Item -ItemType Directory -Force -Path artifact | Out-Null
+          Copy-Item -Path $plugin.FullName -Destination "artifact\125A Ugly Reverb.vst3" -Recurse -Force
+          Write-Host "Collected: $($plugin.FullName)"
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: 125A-Ugly-Reverb-Windows-x64
+          path: artifact/
+          if-no-files-found: error
+          retention-days: 7
