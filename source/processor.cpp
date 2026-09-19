@@ -42,13 +42,19 @@ void Processor::DelayLine::clear()
     lp = 0.f;
 }
 
-float Processor::DelayLine::read(int delaySamples) const
+float Processor::DelayLine::read(float delaySamples) const
 {
     if (data.empty()) return 0.f;
-    int d = std::max(1, std::min(delaySamples, (int)data.size() - 1));
-    int idx = write - d;
-    if (idx < 0) idx += (int)data.size();
-    return data[(size_t)idx];
+    const float d = std::max(1.f, std::min(delaySamples, (float)data.size() - 2.f));
+    const int d0 = (int)std::floor(d);
+    const float frac = d - (float)d0;
+
+    int i0 = write - d0;
+    while (i0 < 0) i0 += (int)data.size();
+    int i1 = i0 - 1;
+    if (i1 < 0) i1 += (int)data.size();
+
+    return data[(size_t)i0] * (1.f - frac) + data[(size_t)i1] * frac;
 }
 
 void Processor::DelayLine::push(float x)
@@ -113,6 +119,8 @@ void Processor::resetDsp()
     preR_.assign(maxPre, 0.f);
     preWrite_ = 0;
     phase_.fill(0.f);
+    for (int i = 0; i < kLines; ++i)
+        rattlePhase_[i] = (2.f * kPi * i) / (float)kLines;
     updateDelayLengths();
 }
 
@@ -235,9 +243,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         float sum = 0.f;
         for (int i = 0; i < kLines; ++i)
         {
-            const float jitter = rattle_ * 0.0035f * (float)sampleRate_ * noise();
-            const int dj = std::max(2, std::min((int)lines_[i].data.size() - 2, delays_[i] + (int)jitter));
-            y[i] = lines_[i].read(dj);
+            const float rate = 0.17f + 0.043f * (float)i;
+            rattlePhase_[i] += 2.f * kPi * rate / (float)sampleRate_;
+            if (rattlePhase_[i] > 2.f * kPi) rattlePhase_[i] -= 2.f * kPi;
+            const float wobble = std::sin(rattlePhase_[i]) + 0.22f * std::sin(rattlePhase_[i] * 2.31f + (float)i);
+            const float jitter = rattle_ * 0.0018f * (float)sampleRate_ * wobble;
+            y[i] = lines_[i].read((float)delays_[i] + jitter);
             lines_[i].lp += dampCoef * (y[i] - lines_[i].lp);
             y[i] = lines_[i].lp;
             sum += y[i];
