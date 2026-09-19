@@ -37,6 +37,7 @@ smtg_target_configure_version_file(UglyReverb)
 add_executable(UglyReverbMeasurements
   tests/dsp_measurements.cpp
   source/processor.cpp
+  ${vst3sdk_SOURCE_DIR}/public.sdk/source/common/memorystream.cpp
 )
 target_compile_definitions(UglyReverbMeasurements PRIVATE UGLY_REVERB_TESTING=1)
 target_include_directories(UglyReverbMeasurements PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
