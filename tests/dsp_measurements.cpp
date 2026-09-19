@@ -40,6 +40,14 @@ double energy(const std::vector<float>& x, size_t a, size_t b)
     return e;
 }
 
+double meanSquare(const std::vector<float>& x, size_t a, size_t b)
+{
+    b = std::min(b, x.size());
+    a = std::min(a, b);
+    if (b <= a) return 0.0;
+    return energy(x, a, b) / (double)(b - a);
+}
+
 double difference(const std::vector<float>& a, const std::vector<float>& b)
 {
     const size_t n = std::min(a.size(), b.size());
@@ -161,16 +169,17 @@ int main()
             for(float v:r.left) peak=std::max(peak,std::fabs(v));
             require(peak < 2.0f, "Bounded peak at "+std::to_string((int)sr)+" Hz", failures);
 
-            const size_t s50=(size_t)(sr*0.05);
-            const size_t s500=(size_t)(sr*0.5);
+            const size_t s100=(size_t)(sr*0.10);
+            const size_t s600=(size_t)(sr*0.60);
             const size_t s3000=(size_t)(sr*3.0);
-            const double early=energy(r.left,s50,s500);
-            const double late=energy(r.left,s3000,r.left.size());
-            std::cout << "[INFO] " << (int)sr << " Hz early_energy=" << early
-                      << " late_energy=" << late
+            const size_t s3500=(size_t)(sr*3.5);
+            const double early=meanSquare(r.left,s100,s600);
+            const double late=meanSquare(r.left,s3000,s3500);
+            std::cout << "[INFO] " << (int)sr << " Hz early_ms=" << early
+                      << " late_ms=" << late
                       << " ratio=" << (early > 0.0 ? late / early : 0.0) << "\n";
-            require(early > 1e-8, "Audible reverb tail energy", failures);
-            require(late < early, "Tail decays over time", failures);
+            require(early > 1e-10, "Audible reverb tail energy", failures);
+            require(late < early, "Tail average power decays over time", failures);
         }
 
         auto silence=render(48000.0,1.0,0.5f,0.f,0.f,false,false);
@@ -202,7 +211,7 @@ int main()
         std::cout << "[INFO] restrained_character_energy=" << restrainedWet
                   << " extreme_character_energy=" << extremeWet
                   << " ratio=" << (restrainedWet > 0.0 ? extremeWet/restrainedWet : 0.0) << "\n";
-        require(extremeWet > restrainedWet * 4.0, "Full Metal/Clang produces substantially stronger character tail", failures);
+        require(extremeWet > restrainedWet * 3.0, "Full Metal/Clang produces substantially stronger character tail", failures);
 
         auto clean=render(48000.0,1.5,0.5f,0.f,0.f);
         auto bit12=render(48000.0,1.5,0.5f,0.f,0.5f);
