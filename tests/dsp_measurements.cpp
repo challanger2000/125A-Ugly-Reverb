@@ -211,7 +211,7 @@ int main()
         std::cout << "[INFO] restrained_character_energy=" << restrainedWet
                   << " extreme_character_energy=" << extremeWet
                   << " ratio=" << (restrainedWet > 0.0 ? extremeWet/restrainedWet : 0.0) << "\n";
-        require(extremeWet > restrainedWet * 3.0, "Full Metal/Clang produces substantially stronger character tail", failures);
+        require(extremeWet > restrainedWet * 8.0, "Full Metal/Clang produces substantially stronger character tail", failures);
 
         auto clean=render(48000.0,1.5,0.5f,0.f,0.f);
         auto bit12=render(48000.0,1.5,0.5f,0.f,0.5f);
