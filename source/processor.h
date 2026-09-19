@@ -35,7 +35,7 @@ private:
 
         void resize(int samples);
         void clear();
-        float read(int delaySamples) const;
+        float read(float delaySamples) const;
         void push(float x);
     };
 
@@ -48,6 +48,7 @@ private:
     std::array<DelayLine, kLines> lines_;
     std::array<int, kLines> delays_ {};
     std::array<float, kLines> phase_ {};
+    std::array<float, kLines> rattlePhase_ {};
 
     std::vector<float> preL_, preR_;
     int preWrite_ = 0;
