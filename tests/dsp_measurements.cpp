@@ -157,6 +157,9 @@ int main()
             const size_t s3000=(size_t)(sr*3.0);
             const double early=energy(r.left,s50,s500);
             const double late=energy(r.left,s3000,r.left.size());
+            std::cout << "[INFO] " << (int)sr << " Hz early_energy=" << early
+                      << " late_energy=" << late
+                      << " ratio=" << (early > 0.0 ? late / early : 0.0) << "\n";
             require(early > 1e-8, "Audible reverb tail energy", failures);
             require(late < early, "Tail decays over time", failures);
         }
