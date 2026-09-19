@@ -162,6 +162,30 @@ float Processor::processDigital(float x) const
     return std::round(clamp1(x) * levels) / levels;
 }
 
+void Processor::applyParameter(ParamID id, float value)
+{
+    const float f = std::max(0.f, std::min(1.f, value));
+    switch (id)
+    {
+        case kMaterial: material_ = f; updateDelayLengths(); break;
+        case kSize: size_ = f; updateDelayLengths(); break;
+        case kDecay: decay_ = f; break;
+        case kPreDelay: preDelay_ = f; break;
+        case kDiffusion: diffusion_ = f; break;
+        case kDamping: damping_ = f; break;
+        case kMetal: metal_ = f; break;
+        case kClang: clang_ = f; break;
+        case kRattle: rattle_ = f; break;
+        case kBody: body_ = f; updateDelayLengths(); break;
+        case kWidth: width_ = f; break;
+        case kMix: mix_ = f; break;
+        case kOutput: output_ = f; break;
+        case kDigital: digital_ = f; break;
+        case kBypass: bypass_ = f > 0.5f; break;
+        default: break;
+    }
+}
+
 tresult PLUGIN_API Processor::process(ProcessData& data)
 {
     if (data.inputParameterChanges)
@@ -175,25 +199,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 int32 offset = 0; ParamValue v = 0.0;
                 if (q->getPoint(q->getPointCount() - 1, offset, v) != kResultTrue) continue;
                 const float f = (float)v;
-                switch (q->getParameterId())
-                {
-                    case kMaterial: material_ = f; updateDelayLengths(); break;
-                    case kSize: size_ = f; updateDelayLengths(); break;
-                    case kDecay: decay_ = f; break;
-                    case kPreDelay: preDelay_ = f; break;
-                    case kDiffusion: diffusion_ = f; break;
-                    case kDamping: damping_ = f; break;
-                    case kMetal: metal_ = f; break;
-                    case kClang: clang_ = f; break;
-                    case kRattle: rattle_ = f; break;
-                    case kBody: body_ = f; updateDelayLengths(); break;
-                    case kWidth: width_ = f; break;
-                    case kMix: mix_ = f; break;
-                    case kOutput: output_ = f; break;
-                    case kDigital: digital_ = f; break;
-                    case kBypass: bypass_ = f > 0.5f; break;
-                    default: break;
-                }
+                applyParameter(q->getParameterId(), f);
             }
         }
     }
