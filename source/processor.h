@@ -24,6 +24,10 @@ public:
     Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream* state) override;
     Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* state) override;
 
+#ifdef UGLY_REVERB_TESTING
+    void setTestParameter(Steinberg::Vst::ParamID id, float value) { applyParameter(id, value); }
+#endif
+
 private:
     static constexpr int kLines = 8;
 
@@ -41,6 +45,7 @@ private:
 
     void resetDsp();
     void updateDelayLengths();
+    void applyParameter(Steinberg::Vst::ParamID id, float value);
     float processDigital(float x) const;
     float noise();
 
