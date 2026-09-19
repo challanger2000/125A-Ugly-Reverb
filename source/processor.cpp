@@ -289,7 +289,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         const float outGain = std::pow(10.f, ((smOutput_ * 24.f) - 12.f) / 20.f);
         const float wet = smMix_;
         const float dry = 1.f - wet;
-        const float rt60Seconds = 0.65f * std::pow(31.f, smDecay_);
+        const float rt60Seconds = 0.55f * std::pow(25.f, smDecay_);
         const float dampCoef = 0.10f + (1.f - smDamping_) * 0.86f;
         const float diff = 0.18f + smDiffusion_ * 0.80f;
         const float drive = 1.f + smMetal_ * 1.8f + smClang_ * 1.2f;
@@ -341,7 +341,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         // Four deliberately audible resonant modes live inside the feedback network.
         // They are normalized for stability, but become long and obvious as CLANG rises.
         float modal = 0.f;
-        const float modalExcite = mean * (0.35f + 0.95f * smMetal_);
+        const float modalExcite = mean * (0.18f + 0.42f * smMetal_);
         for (int m = 0; m < kModes; ++m)
         {
             const float z = modalExcite * modalNorm[m]
@@ -351,8 +351,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             modalZ1_[m] = std::fabs(z) < 1.0e-20f ? 0.f : z;
             modal += z * (0.55f + 0.15f * (float)m);
         }
-        modal *= (0.16f + 0.74f * smClang_);
-        modalWet_ += 0.22f * (modal - modalWet_);
+        modal *= (0.12f + 0.48f * smClang_);
+        const float modalBounded = std::tanh(modal * 0.85f);
+        modalWet_ += 0.18f * (modalBounded - modalWet_);
 
         float fb[kLines];
         for (int i = 0; i < kLines; ++i)
@@ -360,14 +361,15 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float house = mean * 2.f - y[i];
             const float cross = 0.65f * y[(i + 3) & 7] + 0.35f * y[(i + 5) & 7];
             float scattered = house * diff + cross * (1.f - diff);
-            const float ringAmount = smClang_ * 0.11f;
+            const float ringAmount = smClang_ * 0.085f;
             const float ring = std::sin(phase_[i]) * ringAmount * y[i];
-            const float modeFeed = modalWet_ * (((i & 1) == 0) ? 1.f : -1.f) * (0.22f + 0.48f * smMetal_);
+            const float modeFeed = modalWet_ * (((i & 1) == 0) ? 1.f : -1.f)
+                                 * (0.018f + 0.042f * smMetal_) * smClang_;
             phase_[i] += 2.f * kPi * (180.f + 37.f * i + 520.f * smMetal_) / (float)sampleRate_;
             if (phase_[i] > 2.f * kPi) phase_[i] -= 2.f * kPi;
             const float delaySeconds = delayCurrent_[i] / (float)sampleRate_;
-            const float feedback = std::min(0.9975f, std::pow(10.f, -3.f * delaySeconds / rt60Seconds));
-            const float character = scattered + ring + modeFeed;
+            const float feedback = std::min(0.995f, std::pow(10.f, -3.f * delaySeconds / rt60Seconds));
+            const float character = (scattered + ring + modeFeed) / (1.f + ringAmount);
             fb[i] = processDigital(drivenSoftClip(character, drive)) * feedback;
         }
 
@@ -380,9 +382,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             lines_[i].push(inject + fb[i]);
         }
 
-        const float wetGain = 0.62f + 0.78f * smMetal_ + 0.52f * smClang_;
-        float wetL = ((y[0] + y[2] - y[5] + y[7]) * 0.46f + modalWet_ * 0.55f) * wetGain;
-        float wetR = ((y[1] + y[3] - y[4] + y[6]) * 0.46f - modalWet_ * 0.55f) * wetGain;
+        const float wetGain = 0.66f + 0.72f * smMetal_ + 0.46f * smClang_;
+        float wetL = ((y[0] + y[2] - y[5] + y[7]) * 0.44f + modalWet_ * 0.42f) * wetGain;
+        float wetR = ((y[1] + y[3] - y[4] + y[6]) * 0.44f - modalWet_ * 0.42f) * wetGain;
         const float wmid = 0.5f * (wetL + wetR);
         const float wside = 0.5f * (wetL - wetR) * (0.15f + smWidth_ * 1.85f);
         wetL = wmid + wside;
