@@ -49,7 +49,8 @@ double difference(const std::vector<float>& a, const std::vector<float>& b)
 }
 
 RenderResult render(double sr, double seconds, float material, float preDelay, float digital,
-                    bool bypass=false, bool impulse=true, int block=128, float decay=0.58f)
+                    bool bypass=false, bool impulse=true, int block=128, float decay=0.58f,
+                    float metal=0.68f, float clang=0.55f, float damping=0.48f)
 {
     block = std::max(1, block);
     Processor p;
@@ -70,6 +71,9 @@ RenderResult render(double sr, double seconds, float material, float preDelay, f
     p.setTestParameter(UglyReverb::kPreDelay, preDelay);
     p.setTestParameter(UglyReverb::kDigital, digital);
     p.setTestParameter(UglyReverb::kDecay, decay);
+    p.setTestParameter(UglyReverb::kMetal, metal);
+    p.setTestParameter(UglyReverb::kClang, clang);
+    p.setTestParameter(UglyReverb::kDamping, damping);
     p.setTestParameter(UglyReverb::kMix, bypass ? 0.28f : 1.f);
     p.setTestParameter(UglyReverb::kOutput, 0.5f);
     p.setTestParameter(UglyReverb::kBypass, bypass ? 1.f : 0.f);
@@ -190,6 +194,15 @@ int main()
         const double shortLate=energy(shortDecay.left,(size_t)(48000.0*1.5),shortDecay.left.size());
         const double longLate=energy(longDecay.left,(size_t)(48000.0*1.5),longDecay.left.size());
         require(longLate > shortLate * 10.0, "Decay control increases late-tail energy", failures);
+
+        auto restrained=render(48000.0,2.5,0.5f,0.f,0.f,false,true,128,0.55f,0.10f,0.10f,0.70f);
+        auto extremeCharacter=render(48000.0,2.5,0.5f,0.f,0.f,false,true,128,1.0f,1.0f,1.0f,0.0f);
+        const double restrainedWet=energy(restrained.left,(size_t)(48000.0*0.15),restrained.left.size());
+        const double extremeWet=energy(extremeCharacter.left,(size_t)(48000.0*0.15),extremeCharacter.left.size());
+        std::cout << "[INFO] restrained_character_energy=" << restrainedWet
+                  << " extreme_character_energy=" << extremeWet
+                  << " ratio=" << (restrainedWet > 0.0 ? extremeWet/restrainedWet : 0.0) << "\n";
+        require(extremeWet > restrainedWet * 4.0, "Full Metal/Clang produces substantially stronger character tail", failures);
 
         auto clean=render(48000.0,1.5,0.5f,0.f,0.f);
         auto bit12=render(48000.0,1.5,0.5f,0.f,0.5f);
