@@ -123,6 +123,8 @@ void Processor::resetDsp()
     const int maxPre = (int)(sampleRate_ * 0.25) + 16;
     preL_.assign(maxPre, 0.f);
     preR_.assign(maxPre, 0.f);
+    const int maxMetal = (int)(sampleRate_ * 0.040) + 16;
+    for (auto& l : metalCombs_) l.resize(maxMetal);
     preWrite_ = 0;
     phase_.fill(0.f);
     modalZ1_.fill(0.f);
@@ -132,6 +134,16 @@ void Processor::resetDsp()
         rattlePhase_[i] = (2.f * kPi * i) / (float)kLines;
     delayInitialized_ = false;
     updateDelayLengths();
+
+    static constexpr float metalMs[3][kMetalCombs] = {
+        {2.9f, 4.1f, 5.7f, 7.9f, 10.8f, 14.6f},
+        {3.7f, 5.3f, 7.1f, 9.8f, 13.4f, 18.7f},
+        {5.1f, 7.6f, 10.9f, 15.2f, 21.3f, 29.1f}
+    };
+    const int mm = std::max(0, std::min(2, (int)std::lround(material_ * 2.f)));
+    for (int i = 0; i < kMetalCombs; ++i)
+        metalDelay_[i] = metalMs[mm][i] * 0.001f * (float)sampleRate_;
+
     resetSmoothers();
 }
 
@@ -252,6 +264,16 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
     const float delayFadeStep = 1.f / std::max(1.f, 0.025f * (float)sampleRate_);
 
     const int materialMode = std::max(0, std::min(2, (int)std::lround(material_ * 2.f)));
+    static constexpr float metalMs[3][kMetalCombs] = {
+        {2.9f, 4.1f, 5.7f, 7.9f, 10.8f, 14.6f},
+        {3.7f, 5.3f, 7.1f, 9.8f, 13.4f, 18.7f},
+        {5.1f, 7.6f, 10.9f, 15.2f, 21.3f, 29.1f}
+    };
+    for (int i = 0; i < kMetalCombs; ++i)
+    {
+        const float materialScale = 0.78f + 0.44f * body_;
+        metalDelay_[i] = metalMs[materialMode][i] * materialScale * 0.001f * (float)sampleRate_;
+    }
     static constexpr float modalHz[3][kModes] = {
         {610.f,  940.f, 1480.f, 2360.f},
         {420.f,  760.f, 1330.f, 2180.f},
@@ -375,16 +397,50 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
         const float mono = 0.5f * (pL + pR);
         const float side = 0.5f * (pL - pR);
+
+        // Short inharmonic combs provide the unmistakable sheet-metal / tank ring.
+        // METAL controls how much of this structure is excited, CLANG controls persistence.
+        float metalL = 0.f;
+        float metalR = 0.f;
+        const float metalExcite = mono * (0.18f + 0.82f * smMetal_);
+        const float combFeedback = 0.48f + 0.46f * smClang_;
+        for (int i = 0; i < kMetalCombs; ++i)
+        {
+            const float wobble = 1.f + smRattle_ * 0.018f *
+                std::sin(rattlePhase_[i % kLines] * (1.3f + 0.11f * (float)i));
+            const float md = metalDelay_[i] * wobble;
+            float v = metalCombs_[i].read(md);
+
+            const float brighten = 0.35f + 0.55f * (1.f - smDamping_);
+            metalCombs_[i].lp += brighten * (v - metalCombs_[i].lp);
+            const float filtered = metalCombs_[i].lp;
+
+            const float sign = (i & 1) ? -1.f : 1.f;
+            const float push = metalExcite * (0.30f + 0.08f * (float)i)
+                             + filtered * combFeedback * sign;
+            metalCombs_[i].push(std::tanh(push * 1.15f));
+
+            const float tap = filtered * (0.24f + 0.13f * smMetal_);
+            if (i & 1) metalR += tap;
+            else metalL += tap;
+        }
+
+        const float metalMono = 0.5f * (metalL + metalR);
         for (int i = 0; i < kLines; ++i)
         {
             const float inject = mono * (0.34f + 0.16f * smMetal_)
+                               + metalMono * (0.10f + 0.22f * smMetal_)
                                + ((i & 1) ? side : -side) * (0.16f + 0.10f * smWidth_);
             lines_[i].push(inject + fb[i]);
         }
 
-        const float wetGain = 0.66f + 0.72f * smMetal_ + 0.46f * smClang_;
-        float wetL = ((y[0] + y[2] - y[5] + y[7]) * 0.44f + modalWet_ * 0.42f) * wetGain;
-        float wetR = ((y[1] + y[3] - y[4] + y[6]) * 0.44f - modalWet_ * 0.42f) * wetGain;
+        const float wetGain = 0.72f + 0.78f * smMetal_ + 0.58f * smClang_;
+        float wetL = ((y[0] + y[2] - y[5] + y[7]) * 0.42f
+                    + modalWet_ * 0.34f
+                    + metalL * (0.22f + 0.58f * smMetal_)) * wetGain;
+        float wetR = ((y[1] + y[3] - y[4] + y[6]) * 0.42f
+                    - modalWet_ * 0.34f
+                    + metalR * (0.22f + 0.58f * smMetal_)) * wetGain;
         const float wmid = 0.5f * (wetL + wetR);
         const float wside = 0.5f * (wetL - wetR) * (0.15f + smWidth_ * 1.85f);
         wetL = wmid + wside;
