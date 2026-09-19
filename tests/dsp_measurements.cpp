@@ -63,15 +63,18 @@ RenderResult render(double sr, double seconds, float material, float preDelay, f
     setup.sampleRate = sr;
     if (p.setupProcessing(setup) != kResultOk)
         throw std::runtime_error("setupProcessing failed");
-    if (p.setActive(true) != kResultOk)
-        throw std::runtime_error("setActive failed");
 
+    // Set the initial component state before activation, as a host normally does.
+    // Activation then initializes all smoothing states from these target values.
     p.setTestParameter(UglyReverb::kMaterial, material);
     p.setTestParameter(UglyReverb::kPreDelay, preDelay);
     p.setTestParameter(UglyReverb::kDigital, digital);
     p.setTestParameter(UglyReverb::kMix, bypass ? 0.28f : 1.f);
     p.setTestParameter(UglyReverb::kOutput, 0.5f);
     p.setTestParameter(UglyReverb::kBypass, bypass ? 1.f : 0.f);
+
+    if (p.setActive(true) != kResultOk)
+        throw std::runtime_error("setActive failed");
 
     const size_t total=(size_t)std::llround(sr*seconds);
     RenderResult rr;
