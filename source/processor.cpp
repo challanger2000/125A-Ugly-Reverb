@@ -127,7 +127,23 @@ void Processor::resetDsp()
     phase_.fill(0.f);
     for (int i = 0; i < kLines; ++i)
         rattlePhase_[i] = (2.f * kPi * i) / (float)kLines;
+    delayInitialized_ = false;
     updateDelayLengths();
+    resetSmoothers();
+}
+
+void Processor::resetSmoothers()
+{
+    smDecay_ = decay_;
+    smPreDelay_ = preDelay_;
+    smDiffusion_ = diffusion_;
+    smDamping_ = damping_;
+    smMetal_ = metal_;
+    smClang_ = clang_;
+    smRattle_ = rattle_;
+    smWidth_ = width_;
+    smMix_ = mix_;
+    smOutput_ = output_;
 }
 
 void Processor::updateDelayLengths()
@@ -147,17 +163,25 @@ void Processor::updateDelayLengths()
         float ms = base[i] * sizeScale;
         if ((i & 1) == 0) ms *= bodyScale;
         else ms /= std::max(0.55f, bodyScale);
-        int d = (int)std::lround(ms * 0.001f * (float)sampleRate_);
-        delays_[i] = std::max(3, std::min(d, (int)lines_[i].data.size() - 2));
-    }
-}
+        float d = ms * 0.001f * (float)sampleRate_;
+        if (!lines_[i].data.empty())
+            d = std::max(3.f, std::min(d, (float)lines_[i].data.size() - 2.f));
+        else
+            d = std::max(3.f, d);
 
-float Processor::noise()
-{
-    rng_ ^= rng_ << 13;
-    rng_ ^= rng_ >> 17;
-    rng_ ^= rng_ << 5;
-    return ((rng_ & 0x00FFFFFFu) / 8388607.5f) - 1.f;
+        if (!delayInitialized_)
+        {
+            delayCurrent_[i] = delayOld_[i] = delayTarget_[i] = d;
+            delayXfade_[i] = 1.f;
+        }
+        else if (std::fabs(d - delayTarget_[i]) > 0.01f)
+        {
+            delayOld_[i] = delayCurrent_[i];
+            delayTarget_[i] = d;
+            delayXfade_[i] = 0.f;
+        }
+    }
+    delayInitialized_ = true;
 }
 
 float Processor::processDigital(float x) const
@@ -221,27 +245,34 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
     if (!in || !out || data.inputs[0].numChannels < 2 || data.outputs[0].numChannels < 2)
         return kResultFalse;
 
-    const float outGain = std::pow(10.f, ((output_ * 24.f) - 12.f) / 20.f);
-    const float wet = mix_;
-    const float dry = 1.f - wet;
-    const float rt60Seconds = 0.45f * std::pow(24.f, decay_);
-    const float dampCoef = 0.04f + (1.f - damping_) * 0.82f;
-    const float diff = 0.15f + diffusion_ * 0.82f;
-    const float drive = 1.f + metal_ * 2.5f + clang_ * 1.4f;
-    const int preSamp = std::max(0, std::min((int)preL_.size() - 1,
-                      (int)std::lround(preDelay_ * 0.18f * (float)sampleRate_)));
+    const float smoothCoef = 1.f - std::exp(-1.f / std::max(1.f, 0.012f * (float)sampleRate_));
+    const float delayFadeStep = 1.f / std::max(1.f, 0.025f * (float)sampleRate_);
 
     for (int32 s = 0; s < data.numSamples; ++s)
     {
         const float xL = in[0][s];
         const float xR = in[1][s];
 
-        if (bypass_)
-        {
-            out[0][s] = xL;
-            out[1][s] = xR;
-            continue;
-        }
+        smDecay_ += smoothCoef * (decay_ - smDecay_);
+        smPreDelay_ += smoothCoef * (preDelay_ - smPreDelay_);
+        smDiffusion_ += smoothCoef * (diffusion_ - smDiffusion_);
+        smDamping_ += smoothCoef * (damping_ - smDamping_);
+        smMetal_ += smoothCoef * (metal_ - smMetal_);
+        smClang_ += smoothCoef * (clang_ - smClang_);
+        smRattle_ += smoothCoef * (rattle_ - smRattle_);
+        smWidth_ += smoothCoef * (width_ - smWidth_);
+        smMix_ += smoothCoef * (mix_ - smMix_);
+        smOutput_ += smoothCoef * (output_ - smOutput_);
+
+        const float outGain = std::pow(10.f, ((smOutput_ * 24.f) - 12.f) / 20.f);
+        const float wet = smMix_;
+        const float dry = 1.f - wet;
+        const float rt60Seconds = 0.45f * std::pow(24.f, smDecay_);
+        const float dampCoef = 0.04f + (1.f - smDamping_) * 0.82f;
+        const float diff = 0.15f + smDiffusion_ * 0.82f;
+        const float drive = 1.f + smMetal_ * 2.5f + smClang_ * 1.4f;
+        const int preSamp = std::max(0, std::min((int)preL_.size() - 1,
+                          (int)std::lround(smPreDelay_ * 0.18f * (float)sampleRate_)));
 
         preL_[(size_t)preWrite_] = xL;
         preR_[(size_t)preWrite_] = xR;
@@ -259,8 +290,18 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             rattlePhase_[i] += 2.f * kPi * rate / (float)sampleRate_;
             if (rattlePhase_[i] > 2.f * kPi) rattlePhase_[i] -= 2.f * kPi;
             const float wobble = std::sin(rattlePhase_[i]) + 0.22f * std::sin(rattlePhase_[i] * 2.31f + (float)i);
-            const float jitter = rattle_ * 0.0018f * (float)sampleRate_ * wobble;
-            y[i] = lines_[i].read((float)delays_[i] + jitter);
+            const float jitter = smRattle_ * 0.0018f * (float)sampleRate_ * wobble;
+            if (delayXfade_[i] < 1.f)
+            {
+                delayXfade_[i] = std::min(1.f, delayXfade_[i] + delayFadeStep);
+                const float t = delayXfade_[i] * delayXfade_[i] * (3.f - 2.f * delayXfade_[i]);
+                delayCurrent_[i] = delayOld_[i] + (delayTarget_[i] - delayOld_[i]) * t;
+            }
+            else
+            {
+                delayCurrent_[i] = delayTarget_[i];
+            }
+            y[i] = lines_[i].read(delayCurrent_[i] + jitter);
             lines_[i].lp += dampCoef * (y[i] - lines_[i].lp);
             y[i] = lines_[i].lp;
             sum += y[i];
@@ -271,10 +312,10 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         for (int i = 0; i < kLines; ++i)
         {
             float scattered = (mean * 2.f - y[i]) * diff + y[(i + 3) & 7] * (1.f - diff);
-            const float ring = std::sin(phase_[i]) * clang_ * 0.055f * y[i];
-            phase_[i] += 2.f * kPi * (180.f + 37.f * i + 520.f * metal_) / (float)sampleRate_;
+            const float ring = std::sin(phase_[i]) * smClang_ * 0.055f * y[i];
+            phase_[i] += 2.f * kPi * (180.f + 37.f * i + 520.f * smMetal_) / (float)sampleRate_;
             if (phase_[i] > 2.f * kPi) phase_[i] -= 2.f * kPi;
-            const float delaySeconds = (float)delays_[i] / (float)sampleRate_;
+            const float delaySeconds = delayCurrent_[i] / (float)sampleRate_;
             const float feedback = std::min(0.995f, std::pow(10.f, -3.f * delaySeconds / rt60Seconds));
             fb[i] = processDigital(drivenSoftClip(scattered + ring, drive)) * feedback;
         }
@@ -290,12 +331,20 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         float wetL = (y[0] + y[2] - y[5] + y[7]) * 0.30f;
         float wetR = (y[1] + y[3] - y[4] + y[6]) * 0.30f;
         const float wmid = 0.5f * (wetL + wetR);
-        const float wside = 0.5f * (wetL - wetR) * (0.15f + width_ * 1.85f);
+        const float wside = 0.5f * (wetL - wetR) * (0.15f + smWidth_ * 1.85f);
         wetL = wmid + wside;
         wetR = wmid - wside;
 
-        out[0][s] = (xL * dry + wetL * wet) * outGain;
-        out[1][s] = (xR * dry + wetR * wet) * outGain;
+        if (bypass_)
+        {
+            out[0][s] = xL;
+            out[1][s] = xR;
+        }
+        else
+        {
+            out[0][s] = (xL * dry + wetL * wet) * outGain;
+            out[1][s] = (xR * dry + wetR * wet) * outGain;
+        }
     }
 
     return kResultOk;
@@ -308,11 +357,11 @@ tresult PLUGIN_API Processor::setState(IBStream* state)
                       rattle_, body_, width_, mix_, output_, digital_};
     for (float& v : values) if (!s.readFloat(v)) return kResultFalse;
     int32 bp = 0; if (!s.readInt32(bp)) return kResultFalse;
-    material_=values[0]; size_=values[1]; decay_=values[2]; preDelay_=values[3];
-    diffusion_=values[4]; damping_=values[5]; metal_=values[6]; clang_=values[7];
-    rattle_=values[8]; body_=values[9]; width_=values[10]; mix_=values[11];
-    output_=values[12]; digital_=values[13]; bypass_=bp!=0;
-    updateDelayLengths();
+    const ParamID ids[14] = {kMaterial,kSize,kDecay,kPreDelay,kDiffusion,kDamping,kMetal,kClang,
+                             kRattle,kBody,kWidth,kMix,kOutput,kDigital};
+    for (int i = 0; i < 14; ++i) applyParameter(ids[i], values[i]);
+    bypass_ = bp != 0;
+    resetSmoothers();
     return kResultOk;
 }
 
