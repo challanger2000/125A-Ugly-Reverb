@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SMTG_ENABLE_VSTGUI_SUPPORT OFF CACHE BOOL "" FORCE)
 set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES ON CACHE BOOL "" FORCE)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -33,6 +33,17 @@ smtg_add_vst3plugin(UglyReverb
 target_link_libraries(UglyReverb PRIVATE sdk)
 
 smtg_target_configure_version_file(UglyReverb)
+
+add_executable(UglyReverbMeasurements
+  tests/dsp_measurements.cpp
+  source/processor.cpp
+)
+target_compile_definitions(UglyReverbMeasurements PRIVATE UGLY_REVERB_TESTING=1)
+target_include_directories(UglyReverbMeasurements PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+target_link_libraries(UglyReverbMeasurements PRIVATE sdk)
+
+enable_testing()
+add_test(NAME UglyReverbMeasurements COMMAND UglyReverbMeasurements)
 
 if(SMTG_WIN AND MSVC)
   set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT UglyReverb)
