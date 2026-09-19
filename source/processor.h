@@ -59,6 +59,10 @@ private:
     std::array<float, kLines> phase_ {};
     std::array<float, kLines> rattlePhase_ {};
 
+    static constexpr int kModes = 4;
+    std::array<float, kModes> modalZ1_ {};
+    std::array<float, kModes> modalZ2_ {};
+
     std::vector<float> preL_, preR_;
     int preWrite_ = 0;
 
@@ -88,6 +92,7 @@ private:
     float smWidth_ = width_;
     float smMix_ = mix_;
     float smOutput_ = output_;
+    float modalWet_ = 0.f;
 };
 
 } // namespace UglyReverb
