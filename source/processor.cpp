@@ -26,6 +26,12 @@ inline float softClip(float x)
 {
     return x / (1.f + std::fabs(x));
 }
+
+inline float drivenSoftClip(float x, float drive)
+{
+    const float d = std::max(1.f, drive);
+    return softClip(x * d) / d;
+}
 }
 
 void Processor::DelayLine::resize(int samples)
@@ -218,7 +224,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
     const float outGain = std::pow(10.f, ((output_ * 24.f) - 12.f) / 20.f);
     const float wet = mix_;
     const float dry = 1.f - wet;
-    const float feedback = std::min(0.985f, 0.42f + decay_ * 0.53f + metal_ * 0.025f);
+    const float rt60Seconds = 0.45f * std::pow(24.f, decay_);
     const float dampCoef = 0.04f + (1.f - damping_) * 0.82f;
     const float diff = 0.15f + diffusion_ * 0.82f;
     const float drive = 1.f + metal_ * 2.5f + clang_ * 1.4f;
@@ -268,7 +274,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float ring = std::sin(phase_[i]) * clang_ * 0.055f * y[i];
             phase_[i] += 2.f * kPi * (180.f + 37.f * i + 520.f * metal_) / (float)sampleRate_;
             if (phase_[i] > 2.f * kPi) phase_[i] -= 2.f * kPi;
-            fb[i] = processDigital(softClip((scattered + ring) * drive)) * feedback;
+            const float delaySeconds = (float)delays_[i] / (float)sampleRate_;
+            const float feedback = std::min(0.995f, std::pow(10.f, -3.f * delaySeconds / rt60Seconds));
+            fb[i] = processDigital(drivenSoftClip(scattered + ring, drive)) * feedback;
         }
 
         const float mono = 0.5f * (pL + pR);
