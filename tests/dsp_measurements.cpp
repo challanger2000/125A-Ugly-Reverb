@@ -51,6 +51,7 @@ double difference(const std::vector<float>& a, const std::vector<float>& b)
 RenderResult render(double sr, double seconds, float material, float preDelay, float digital,
                     bool bypass=false, bool impulse=true, int block=128)
 {
+    block = std::max(1, block);
     Processor p;
     if (p.initialize(nullptr) != kResultOk)
         throw std::runtime_error("Processor initialize failed");
@@ -58,7 +59,7 @@ RenderResult render(double sr, double seconds, float material, float preDelay, f
     ProcessSetup setup {};
     setup.processMode = kRealtime;
     setup.symbolicSampleSize = kSample32;
-    setup.maxSamplesPerBlock = 128;
+    setup.maxSamplesPerBlock = block;
     setup.sampleRate = sr;
     if (p.setupProcessing(setup) != kResultOk)
         throw std::runtime_error("setupProcessing failed");
@@ -77,7 +78,6 @@ RenderResult render(double sr, double seconds, float material, float preDelay, f
     rr.left.assign(total,0.f);
     rr.right.assign(total,0.f);
 
-    block = std::max(1, block);
     std::vector<float> inL(block,0.f), inR(block,0.f), outL(block,0.f), outR(block,0.f);
     float* inPtrs[2]={inL.data(),inR.data()};
     float* outPtrs[2]={outL.data(),outR.data()};
