@@ -188,8 +188,8 @@ float Processor::processDigital(float x) const
 {
     const int mode = std::max(0, std::min(2, (int)std::lround(digital_ * 2.f)));
     if (mode == 0) return x;
-    const float levels = mode == 1 ? 2048.f : 128.f;
-    return std::round(clamp1(x) * levels) / levels;
+    const float scale = mode == 1 ? 2047.f : 127.f;
+    return std::round(clamp1(x) * scale) / scale;
 }
 
 void Processor::applyParameter(ParamID id, float value)
@@ -271,15 +271,19 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         const float dampCoef = 0.04f + (1.f - smDamping_) * 0.82f;
         const float diff = 0.15f + smDiffusion_ * 0.82f;
         const float drive = 1.f + smMetal_ * 2.5f + smClang_ * 1.4f;
-        const int preSamp = std::max(0, std::min((int)preL_.size() - 1,
-                          (int)std::lround(smPreDelay_ * 0.18f * (float)sampleRate_)));
+        const float preSamples = std::max(0.f, std::min((float)preL_.size() - 2.f,
+                               smPreDelay_ * 0.18f * (float)sampleRate_));
 
         preL_[(size_t)preWrite_] = xL;
         preR_[(size_t)preWrite_] = xR;
-        int pr = preWrite_ - preSamp;
-        while (pr < 0) pr += (int)preL_.size();
-        const float pL = preL_[(size_t)pr];
-        const float pR = preR_[(size_t)pr];
+        const int pre0 = (int)std::floor(preSamples);
+        const float preFrac = preSamples - (float)pre0;
+        int pr0 = preWrite_ - pre0;
+        while (pr0 < 0) pr0 += (int)preL_.size();
+        int pr1 = pr0 - 1;
+        if (pr1 < 0) pr1 += (int)preL_.size();
+        const float pL = preL_[(size_t)pr0] * (1.f - preFrac) + preL_[(size_t)pr1] * preFrac;
+        const float pR = preR_[(size_t)pr0] * (1.f - preFrac) + preR_[(size_t)pr1] * preFrac;
         if (++preWrite_ >= (int)preL_.size()) preWrite_ = 0;
 
         float y[kLines] {};
@@ -295,13 +299,16 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             {
                 delayXfade_[i] = std::min(1.f, delayXfade_[i] + delayFadeStep);
                 const float t = delayXfade_[i] * delayXfade_[i] * (3.f - 2.f * delayXfade_[i]);
+                const float yOld = lines_[i].read(delayOld_[i] + jitter);
+                const float yNew = lines_[i].read(delayTarget_[i] + jitter);
+                y[i] = yOld * (1.f - t) + yNew * t;
                 delayCurrent_[i] = delayOld_[i] + (delayTarget_[i] - delayOld_[i]) * t;
             }
             else
             {
                 delayCurrent_[i] = delayTarget_[i];
+                y[i] = lines_[i].read(delayCurrent_[i] + jitter);
             }
-            y[i] = lines_[i].read(delayCurrent_[i] + jitter);
             lines_[i].lp += dampCoef * (y[i] - lines_[i].lp);
             y[i] = lines_[i].lp;
             sum += y[i];
@@ -312,12 +319,14 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         for (int i = 0; i < kLines; ++i)
         {
             float scattered = (mean * 2.f - y[i]) * diff + y[(i + 3) & 7] * (1.f - diff);
-            const float ring = std::sin(phase_[i]) * smClang_ * 0.055f * y[i];
+            const float ringAmount = smClang_ * 0.055f;
+            const float ring = std::sin(phase_[i]) * ringAmount * y[i];
             phase_[i] += 2.f * kPi * (180.f + 37.f * i + 520.f * smMetal_) / (float)sampleRate_;
             if (phase_[i] > 2.f * kPi) phase_[i] -= 2.f * kPi;
             const float delaySeconds = delayCurrent_[i] / (float)sampleRate_;
             const float feedback = std::min(0.995f, std::pow(10.f, -3.f * delaySeconds / rt60Seconds));
-            fb[i] = processDigital(drivenSoftClip(scattered + ring, drive)) * feedback;
+            const float character = (scattered + ring) / (1.f + ringAmount);
+            fb[i] = processDigital(drivenSoftClip(character, drive)) * feedback;
         }
 
         const float mono = 0.5f * (pL + pR);
