@@ -63,6 +63,10 @@ private:
     std::array<float, kModes> modalZ1_ {};
     std::array<float, kModes> modalZ2_ {};
 
+    static constexpr int kMetalCombs = 6;
+    std::array<DelayLine, kMetalCombs> metalCombs_;
+    std::array<float, kMetalCombs> metalDelay_ {};
+
     std::vector<float> preL_, preR_;
     int preWrite_ = 0;
 
