@@ -44,21 +44,23 @@ private:
     };
 
     void resetDsp();
+    void resetSmoothers();
     void updateDelayLengths();
     void applyParameter(Steinberg::Vst::ParamID id, float value);
     float processDigital(float x) const;
-    float noise();
 
     double sampleRate_ = 44100.0;
     std::array<DelayLine, kLines> lines_;
-    std::array<int, kLines> delays_ {};
+    std::array<float, kLines> delayCurrent_ {};
+    std::array<float, kLines> delayOld_ {};
+    std::array<float, kLines> delayTarget_ {};
+    std::array<float, kLines> delayXfade_ {};
+    bool delayInitialized_ = false;
     std::array<float, kLines> phase_ {};
     std::array<float, kLines> rattlePhase_ {};
 
     std::vector<float> preL_, preR_;
     int preWrite_ = 0;
-
-    uint32_t rng_ = 0x125A5EEDu;
 
     float material_ = 0.f;
     float size_ = 0.55f;
@@ -75,6 +77,17 @@ private:
     float output_ = 0.5f;
     float digital_ = 0.f;
     bool bypass_ = false;
+
+    float smDecay_ = decay_;
+    float smPreDelay_ = preDelay_;
+    float smDiffusion_ = diffusion_;
+    float smDamping_ = damping_;
+    float smMetal_ = metal_;
+    float smClang_ = clang_;
+    float smRattle_ = rattle_;
+    float smWidth_ = width_;
+    float smMix_ = mix_;
+    float smOutput_ = output_;
 };
 
 } // namespace UglyReverb
