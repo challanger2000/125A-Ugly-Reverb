@@ -3,7 +3,6 @@
 #include "vstgui/lib/controls/cbuttons.h"
 #include "vstgui/lib/controls/ccontrol.h"
 #include "vstgui/lib/cview.h"
-#include "vstgui/lib/cbitmap.h"
 #include <string>
 #include <vector>
 
@@ -27,12 +26,10 @@ public:
 
 class UglyKnob final : public VSTGUI::CKnob {
 public:
-    UglyKnob(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag,VSTGUI::CBitmap* body);
+    UglyKnob(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag);
     UglyKnob(const UglyKnob& o);
     VSTGUI::CBaseObject* newCopy() const override { return new UglyKnob(*this); }
     void draw(VSTGUI::CDrawContext* c) override;
-private:
-    VSTGUI::CBitmap* body_ {nullptr};
 };
 
 class UglySelector final : public VSTGUI::CControl {
@@ -50,14 +47,10 @@ private:
 
 class UglyToggle final : public VSTGUI::COnOffButton {
 public:
-    UglyToggle(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag,
-               VSTGUI::CBitmap* offBitmap,VSTGUI::CBitmap* onBitmap);
+    UglyToggle(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag);
     UglyToggle(const UglyToggle& o);
     VSTGUI::CBaseObject* newCopy() const override { return new UglyToggle(*this); }
     void draw(VSTGUI::CDrawContext* c) override;
-private:
-    VSTGUI::CBitmap* off_ {nullptr};
-    VSTGUI::CBitmap* on_ {nullptr};
 };
 
 } // namespace UglyReverb
