@@ -57,6 +57,19 @@ if(NOT UGLY_OVERLAY_RESULT EQUAL 0)
 endif()
 message(STATUS "${UGLY_OVERLAY_OUTPUT}")
 
+execute_process(
+  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_knob_strips.py"
+          "${CMAKE_CURRENT_SOURCE_DIR}/resource/Old_amp_black_01.png"
+          "${UGLY_GENERATED_RESOURCE_DIR}"
+  RESULT_VARIABLE UGLY_KNOB_RESULT
+  OUTPUT_VARIABLE UGLY_KNOB_OUTPUT
+  ERROR_VARIABLE UGLY_KNOB_ERROR
+)
+if(NOT UGLY_KNOB_RESULT EQUAL 0)
+  message(FATAL_ERROR "Failed to generate knob strips: ${UGLY_KNOB_ERROR}")
+endif()
+message(STATUS "${UGLY_KNOB_OUTPUT}")
+
 
 smtg_add_vst3plugin(UglyReverb
   source/version.h
@@ -82,6 +95,12 @@ smtg_target_add_plugin_resources(UglyReverb
     resource/Old_amp_black_01.png
     "${UGLY_GENERATED_RESOURCE_DIR}/ugly_wear_overlay.png"
     "${UGLY_GENERATED_RESOURCE_DIR}/ugly_glass_overlay.png"
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_54.png"
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_54#2.0x.png"
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_56.png"
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_56#2.0x.png"
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_58.png"
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_58#2.0x.png"
 )
 
 smtg_target_configure_version_file(UglyReverb)
