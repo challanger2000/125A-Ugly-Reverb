@@ -3,7 +3,6 @@
 #include "public.sdk/source/vst/vstaudioeffect.h"
 #include <array>
 #include <vector>
-#include <cstdint>
 
 namespace UglyReverb {
 
@@ -29,8 +28,6 @@ public:
 #endif
 
 private:
-    static constexpr int kLines = 8;
-
     struct DelayLine
     {
         std::vector<float> data;
@@ -43,29 +40,21 @@ private:
         void push(float x);
     };
 
+    static constexpr int kCombs = 8;
+    static constexpr int kAllpasses = 4;
+
     void resetDsp();
     void resetSmoothers();
-    void updateDelayLengths();
     void applyParameter(Steinberg::Vst::ParamID id, float value);
     float processDigital(float x) const;
+    float processAllpass(DelayLine& line, float input, float delaySamples, float feedback);
 
     double sampleRate_ = 44100.0;
-    std::array<DelayLine, kLines> lines_;
-    std::array<float, kLines> delayCurrent_ {};
-    std::array<float, kLines> delayOld_ {};
-    std::array<float, kLines> delayTarget_ {};
-    std::array<float, kLines> delayXfade_ {};
-    bool delayInitialized_ = false;
-    std::array<float, kLines> phase_ {};
-    std::array<float, kLines> rattlePhase_ {};
-
-    static constexpr int kModes = 4;
-    std::array<float, kModes> modalZ1_ {};
-    std::array<float, kModes> modalZ2_ {};
-
-    static constexpr int kMetalCombs = 6;
-    std::array<DelayLine, kMetalCombs> metalCombs_;
-    std::array<float, kMetalCombs> metalDelay_ {};
+    std::array<DelayLine, kCombs> combL_;
+    std::array<DelayLine, kCombs> combR_;
+    std::array<DelayLine, kAllpasses> apL_;
+    std::array<DelayLine, kAllpasses> apR_;
+    std::array<float, kCombs> rattlePhase_ {};
 
     std::vector<float> preL_, preR_;
     int preWrite_ = 0;
@@ -96,7 +85,6 @@ private:
     float smWidth_ = width_;
     float smMix_ = mix_;
     float smOutput_ = output_;
-    float modalWet_ = 0.f;
 };
 
 } // namespace UglyReverb
