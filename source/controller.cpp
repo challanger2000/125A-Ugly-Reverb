@@ -33,18 +33,25 @@ tresult PLUGIN_API Controller::initialize(FUnknown* context)
     material->appendString(STR16("Tank"));
     parameters.addParameter(material);
 
-    parameters.addParameter(new RangeParameter(STR16("Size"), kSize, STR16("%"), 0.0, 100.0, 55.0));
-    parameters.addParameter(new RangeParameter(STR16("Decay"), kDecay, STR16("%"), 0.0, 100.0, 58.0));
-    parameters.addParameter(new RangeParameter(STR16("Pre-Delay"), kPreDelay, STR16("ms"), 0.0, 180.0, 14.4));
-    parameters.addParameter(new RangeParameter(STR16("Diffusion"), kDiffusion, STR16("%"), 0.0, 100.0, 45.0));
-    parameters.addParameter(new RangeParameter(STR16("Damping"), kDamping, STR16("%"), 0.0, 100.0, 48.0));
-    parameters.addParameter(new RangeParameter(STR16("Metal"), kMetal, STR16("%"), 0.0, 100.0, 68.0));
-    parameters.addParameter(new RangeParameter(STR16("Clang"), kClang, STR16("%"), 0.0, 100.0, 55.0));
-    parameters.addParameter(new RangeParameter(STR16("Rattle"), kRattle, STR16("%"), 0.0, 100.0, 12.0));
-    parameters.addParameter(new RangeParameter(STR16("Body"), kBody, STR16("%"), 0.0, 100.0, 55.0));
-    parameters.addParameter(new RangeParameter(STR16("Width"), kWidth, STR16("%"), 0.0, 100.0, 75.0));
-    parameters.addParameter(new RangeParameter(STR16("Mix"), kMix, STR16("%"), 0.0, 100.0, 28.0));
-    parameters.addParameter(new RangeParameter(STR16("Output"), kOutput, STR16("dB"), -12.0, 12.0, 0.0));
+    auto addRange=[&](const TChar* title,ParamID id,const TChar* unit,
+                       ParamValue minValue,ParamValue maxValue,ParamValue defaultValue,
+                       int32 precision) {
+        auto* p=new RangeParameter(title,id,unit,minValue,maxValue,defaultValue);
+        p->setPrecision(precision);
+        parameters.addParameter(p);
+    };
+    addRange(STR16("Size"),kSize,STR16("%"),0.0,100.0,55.0,0);
+    addRange(STR16("Decay"),kDecay,STR16("%"),0.0,100.0,58.0,0);
+    addRange(STR16("Pre-Delay"),kPreDelay,STR16("ms"),0.0,180.0,14.4,1);
+    addRange(STR16("Diffusion"),kDiffusion,STR16("%"),0.0,100.0,45.0,0);
+    addRange(STR16("Damping"),kDamping,STR16("%"),0.0,100.0,48.0,0);
+    addRange(STR16("Metal"),kMetal,STR16("%"),0.0,100.0,68.0,0);
+    addRange(STR16("Clang"),kClang,STR16("%"),0.0,100.0,55.0,0);
+    addRange(STR16("Rattle"),kRattle,STR16("%"),0.0,100.0,12.0,0);
+    addRange(STR16("Body"),kBody,STR16("%"),0.0,100.0,55.0,0);
+    addRange(STR16("Width"),kWidth,STR16("%"),0.0,100.0,75.0,0);
+    addRange(STR16("Mix"),kMix,STR16("%"),0.0,100.0,28.0,0);
+    addRange(STR16("Output"),kOutput,STR16("dB"),-12.0,12.0,0.0,1);
 
     auto* digital = new StringListParameter(STR16("Digital Color"), kDigital);
     digital->appendString(STR16("Clean"));
