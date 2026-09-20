@@ -1,0 +1,1 @@
+Verify corrected branding generation and PNG-backed GUI.
