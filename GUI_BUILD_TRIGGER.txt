@@ -1,1 +1,0 @@
-Verify embedded 60x60 PNG controls and cleaned GUI.
