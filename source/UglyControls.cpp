@@ -1,6 +1,8 @@
 #include "UglyControls.h"
 #include "branding_master.h"
 #include "vstgui/lib/cdrawcontext.h"
+#include "vstgui/lib/cbitmap.h"
+#include "vstgui/lib/cresourcedescription.h"
 #include "vstgui/lib/cgradient.h"
 #include "vstgui/lib/cgraphicspath.h"
 #include "vstgui/plugin-bindings/vst3editor.h"
@@ -115,103 +117,6 @@ void modulePanel(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r,
     c->drawLine({r.left+12.0,r.top+2.0},{r.right-12.0,r.top+2.0});
 }
 
-void panelWear(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r,int variant)
-{
-    // v3: ageing is concentrated at edges and handling points.  Avoid broad,
-    // painted-on grunge shapes so the panels still read as real hardware.
-    const int strength=variant==1?2:1;
-    const VSTGUI::CColor metal {205,216,224,static_cast<uint8_t>(104+strength*22)};
-    const VSTGUI::CColor dark  {0,5,10,static_cast<uint8_t>(112+strength*14)};
-    const VSTGUI::CColor oxide {142,78,42,static_cast<uint8_t>(70+strength*15)};
-
-    c->setLineWidth(1.25);
-    auto nick=[&](double x,double y,double len,bool vertical,const VSTGUI::CColor& color) {
-        c->setFrameColor(color);
-        if(vertical)
-            c->drawLine({x,y},{x+0.9,y+len});
-        else
-            c->drawLine({x,y},{x+len,y+0.8});
-    };
-
-    const double shift=static_cast<double>(variant)*7.0;
-
-    // Paint chips around exposed edges.
-    nick(r.left+20.0+shift,r.top+1.2,15.0,false,metal);
-    nick(r.left+73.0+shift*0.4,r.top+1.8,7.0,false,dark);
-    nick(r.right-78.0-shift*0.4,r.top+1.0,18.0,false,metal);
-    nick(r.right-43.0-shift*0.2,r.top+2.0,6.0,false,oxide);
-    nick(r.left+1.2,r.top+82.0+shift,12.0,true,dark);
-    nick(r.left+1.0,r.top+231.0-shift*0.5,10.0,true,metal);
-    nick(r.right-1.8,r.top+145.0-shift*0.4,13.0,true,metal);
-    nick(r.right-1.0,r.bottom-88.0+shift*0.3,9.0,true,oxide);
-    nick(r.left+40.0+shift,r.bottom-1.6,19.0,false,dark);
-    nick(r.left+114.0+shift*0.5,r.bottom-1.1,11.0,false,metal);
-    nick(r.right-92.0-shift*0.4,r.bottom-1.4,13.0,false,oxide);
-
-    // Fine, irregular surface scratches.  The central panel gets more of them,
-    // but never a full-width decorative slash.
-    c->setFrameColor({215,224,229,60});
-    c->setLineWidth(0.9);
-    c->drawLine({r.left+22.0,r.top+35.0+shift},{r.left+45.0,r.top+30.0+shift});
-    c->drawLine({r.right-54.0,r.bottom-31.0-shift*0.3},{r.right-31.0,r.bottom-36.0-shift*0.3});
-    c->drawLine({r.left+54.0,r.top+178.0},{r.left+73.0,r.top+174.0});
-
-    c->setFrameColor(oxide);
-    c->drawLine({r.left+9.0,r.bottom-58.0+shift*0.25},{r.left+21.0,r.bottom-54.0+shift*0.25});
-    c->drawLine({r.right-29.0,r.top+78.0},{r.right-19.0,r.top+81.0});
-
-    if(variant==1) {
-        // Broken scrape: three mismatched fragments instead of two parallel lines.
-        c->setFrameColor({220,227,231,72});
-        c->setLineWidth(1.1);
-        c->drawLine({r.left+72.0,r.top+286.0},{r.left+119.0,r.top+279.0});
-        c->drawLine({r.left+130.0,r.top+278.0},{r.left+168.0,r.top+272.0});
-        c->drawLine({r.left+183.0,r.top+269.0},{r.left+207.0,r.top+266.0});
-
-        c->setFrameColor({0,5,9,72});
-        c->setLineWidth(1.4);
-        c->drawLine({r.left+104.0,r.top+284.0},{r.left+132.0,r.top+281.0});
-        c->drawLine({r.left+171.0,r.top+275.0},{r.left+194.0,r.top+271.0});
-
-        // Small impact/scuff made from irregular strokes, not a filled oval.
-        c->setFrameColor({1,6,10,76});
-        c->setLineWidth(1.6);
-        c->drawLine({r.right-77.0,r.top+194.0},{r.right-62.0,r.top+200.0});
-        c->drawLine({r.right-72.0,r.top+202.0},{r.right-57.0,r.top+197.0});
-        c->setFrameColor({205,215,221,48});
-        c->setLineWidth(0.8);
-        c->drawLine({r.right-79.0,r.top+192.0},{r.right-68.0,r.top+194.0});
-    }
-}
-
-void wornControlHalo(VSTGUI::CDrawContext* c,const VSTGUI::CPoint& p,double radius,int variant)
-{
-    // Short broken marks imply repeated handling without drawing an obvious ring.
-    VSTGUI::CRect ring(p.x-radius,p.y-radius,p.x+radius,p.y+radius);
-    VSTGUI::CRect outer(p.x-radius-2.0,p.y-radius-2.0,p.x+radius+2.0,p.y+radius+2.0);
-
-    c->setLineWidth(1.0);
-    c->setFrameColor({216,223,227,48});
-    c->drawArc(ring,196.f+variant*11.f,222.f+variant*10.f,VSTGUI::kDrawStroked);
-    c->drawArc(ring,302.f+variant*7.f,322.f+variant*8.f,VSTGUI::kDrawStroked);
-
-    c->setFrameColor({0,4,8,58});
-    c->setLineWidth(1.2);
-    c->drawArc(outer,35.f+variant*9.f,62.f+variant*9.f,VSTGUI::kDrawStroked);
-    c->drawArc(outer,116.f+variant*6.f,133.f+variant*6.f,VSTGUI::kDrawStroked);
-
-    c->setFrameColor({148,82,43,68});
-    c->setLineWidth(0.9);
-    c->drawLine({p.x-radius*0.84,p.y+radius*0.58},
-                {p.x-radius*0.61,p.y+radius*0.47});
-    c->drawLine({p.x+radius*0.47,p.y-radius*0.82},
-                {p.x+radius*0.61,p.y-radius*0.69});
-
-    c->setFrameColor({220,226,230,46});
-    c->drawLine({p.x-radius*0.18,p.y-radius*1.02},
-                {p.x+radius*0.10,p.y-radius*0.96});
-}
-
 void degradedPlate(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r)
 {
     // Battered service plate: now intentionally readable at normal DAW scale.
@@ -276,57 +181,6 @@ void warningStencil(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r)
     c->drawLine({r.right-29.0,r.top+7.0},{r.right-23.0,r.top+7.0});
 }
 
-void drawGlassOverlay(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r)
-{
-    // Very subtle used protective glass over the complete editor.  The broad
-    // reflections are intentionally low-alpha; small wipe/scratch marks stop
-    // the result from reading as modern high-gloss UI.
-    c->setDrawMode(VSTGUI::kAntiAliasing|VSTGUI::kNonIntegralMode);
-
-    auto* full=c->createRoundRectGraphicsPath(r,0.0);
-    if(full) {
-        auto* haze=VSTGUI::CGradient::create(
-            0.0,1.0,VSTGUI::CColor{236,244,250,10},VSTGUI::CColor{168,190,205,2});
-        if(haze) {
-            c->fillLinearGradient(full,*haze,r.getTopLeft(),r.getBottomLeft(),false);
-            haze->forget();
-        }
-        full->forget();
-    }
-
-    auto drawReflection=[&](double x1,double x2,double drift,uint8_t alpha) {
-        auto* p=c->createGraphicsPath();
-        if(!p) return;
-        p->beginSubpath({r.left+x1,r.top});
-        p->addLine({r.left+x2,r.top});
-        p->addLine({r.left+x2+drift,r.bottom});
-        p->addLine({r.left+x1+drift,r.bottom});
-        p->closeSubpath();
-        c->setFillColor({235,243,248,alpha});
-        c->drawGraphicsPath(p,VSTGUI::CDrawContext::kPathFilled);
-        p->forget();
-    };
-    drawReflection(58.0,93.0,118.0,5);
-    drawReflection(508.0,525.0,72.0,3);
-
-    // Matte wipe traces: broad but almost invisible.
-    c->setFrameColor({224,235,242,11});
-    c->setLineWidth(5.0);
-    c->drawLine({r.left+118.0,r.top+94.0},{r.left+248.0,r.top+76.0});
-    c->drawLine({r.left+465.0,r.top+333.0},{r.left+624.0,r.top+309.0});
-
-    // Fine scratches on the cover itself.
-    c->setLineWidth(0.7);
-    c->setFrameColor({240,246,250,22});
-    c->drawLine({r.left+154.0,r.top+67.0},{r.left+189.0,r.top+62.0});
-    c->drawLine({r.left+565.0,r.top+118.0},{r.left+594.0,r.top+113.0});
-    c->drawLine({r.left+321.0,r.top+394.0},{r.left+352.0,r.top+390.0});
-
-    c->setFrameColor({2,7,11,14});
-    c->drawLine({r.left+214.0,r.top+211.0},{r.left+264.0,r.top+205.0});
-    c->drawLine({r.left+621.0,r.top+287.0},{r.left+650.0,r.top+282.0});
-}
-
 
 } // namespace
 
@@ -358,33 +212,11 @@ void UglyFaceplate::draw(VSTGUI::CDrawContext* c)
     modulePanel(c,{r.left+628.0,r.top+70.0,r.left+744.0,r.top+414.0},
                 {24,74,121,255},{10,37,67,255});
 
-    const VSTGUI::CRect leftPanel  {r.left+16.0,r.top+70.0,r.left+278.0,r.top+414.0};
-    const VSTGUI::CRect uglyPanel  {r.left+288.0,r.top+70.0,r.left+618.0,r.top+414.0};
-    const VSTGUI::CRect masterPanel{r.left+628.0,r.top+70.0,r.left+744.0,r.top+414.0};
-    panelWear(c,leftPanel,0);
-    panelWear(c,uglyPanel,1);
-    panelWear(c,masterPanel,2);
-
-    // The character section looks most "handled": these marks sit behind the
-    // actual controls and remain subtle at normal viewing size.
-    wornControlHalo(c,{r.left+340.0,r.top+295.0},32.0,0); // METAL
-    wornControlHalo(c,{r.left+441.0,r.top+295.0},32.0,1); // CLANG
-    wornControlHalo(c,{r.left+542.0,r.top+295.0},32.0,2); // RATTLE
-
     // Free space below the left controls becomes a more visible battered service plate.
     degradedPlate(c,{r.left+30.0,r.top+359.0,r.left+264.0,r.top+405.0});
 
     // Small faded warning stencil in the deliberately unstable network.
     warningStencil(c,{r.left+493.0,r.top+219.0,r.left+594.0,r.top+231.0});
-
-    // A couple of isolated chassis scratches stop the outer black shell from
-    // looking factory-new while keeping the branding/header readable.
-    c->setLineWidth(1.0);
-    c->setFrameColor({126,137,145,48});
-    c->drawLine({r.left+123.0,r.top+18.0},{r.left+147.0,r.top+15.0});
-    c->drawLine({r.right-86.0,r.top+49.0},{r.right-55.0,r.top+46.0});
-    c->setFrameColor({116,68,43,46});
-    c->drawLine({r.left+8.0,r.top+201.0},{r.left+12.0,r.top+218.0});
 
     // Small chassis feet/details keep the black frame from looking flat.
     c->setFillColor({23,27,33,255});
@@ -395,15 +227,31 @@ void UglyFaceplate::draw(VSTGUI::CDrawContext* c)
     setDirty(false);
 }
 
-UglyGlassOverlay::UglyGlassOverlay(const VSTGUI::CRect& r):VSTGUI::CView(r)
+UglyTextureOverlay::UglyTextureOverlay(const VSTGUI::CRect& r,const char* resourceName,float alpha)
+: VSTGUI::CView(r),resourceName_(resourceName?resourceName:""),alpha_(alpha)
 {
     setMouseEnabled(false);
     setTransparency(true);
+    bitmap_=new VSTGUI::CBitmap(VSTGUI::CResourceDescription(resourceName_.c_str()));
 }
 
-void UglyGlassOverlay::draw(VSTGUI::CDrawContext* c)
+UglyTextureOverlay::UglyTextureOverlay(const UglyTextureOverlay& o)
+: VSTGUI::CView(o),resourceName_(o.resourceName_),alpha_(o.alpha_)
 {
-    drawGlassOverlay(c,getViewSize());
+    setMouseEnabled(false);
+    setTransparency(true);
+    bitmap_=new VSTGUI::CBitmap(VSTGUI::CResourceDescription(resourceName_.c_str()));
+}
+
+UglyTextureOverlay::~UglyTextureOverlay() noexcept
+{
+    if(bitmap_) bitmap_->forget();
+}
+
+void UglyTextureOverlay::draw(VSTGUI::CDrawContext* c)
+{
+    if(bitmap_ && bitmap_->isLoaded())
+        bitmap_->draw(c,getViewSize(),VSTGUI::CPoint{0,0},alpha_);
     setDirty(false);
 }
 
