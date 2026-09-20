@@ -39,7 +39,7 @@ foreach(UGLY_BRANDING_TAG IN LISTS UGLY_BRANDING_PATH_TAGS)
   else()
     message(FATAL_ERROR "Unexpected 125A branding fill: ${UGLY_BRANDING_FILL}")
   endif()
-  string(APPEND UGLY_BRANDING_PATHS "    {\\\"${UGLY_BRANDING_D}\\\", ${UGLY_BRANDING_RED}},\\n")
+  string(APPEND UGLY_BRANDING_PATHS "    {\"${UGLY_BRANDING_D}\", ${UGLY_BRANDING_RED}},\n")
 endforeach()
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/source/branding_master.h.in" "${CMAKE_BINARY_DIR}/branding_master.h" @ONLY)
 
