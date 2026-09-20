@@ -190,18 +190,34 @@ void Processor::applyParameter(ParamID id, float value)
 
 tresult PLUGIN_API Processor::process(ProcessData& data)
 {
+    // Cache host automation queues without allocating in the audio thread.
+    // Targets are applied at their VST3 sample offsets; continuous controls then
+    // keep using the existing short smoothing time.
+    static constexpr int32 kMaxParamQueues = 16;
+    IParamValueQueue* paramQueues[kMaxParamQueues] {};
+    int32 pointIndex[kMaxParamQueues] {};
+    int32 pointCount[kMaxParamQueues] {};
+    int32 nextOffset[kMaxParamQueues] {};
+    ParamValue nextValue[kMaxParamQueues] {};
+    int32 activeQueues = 0;
+
     if (data.inputParameterChanges)
     {
-        const int32 count = data.inputParameterChanges->getParameterCount();
+        const int32 count = std::min<int32>(
+            data.inputParameterChanges->getParameterCount(), kMaxParamQueues);
         for (int32 i = 0; i < count; ++i)
         {
-            if (auto* q = data.inputParameterChanges->getParameterData(i))
+            auto* q = data.inputParameterChanges->getParameterData(i);
+            if (!q || q->getPointCount() <= 0) continue;
+
+            const int32 slot = activeQueues++;
+            paramQueues[slot] = q;
+            pointCount[slot] = q->getPointCount();
+            pointIndex[slot] = 0;
+            if (q->getPoint(0, nextOffset[slot], nextValue[slot]) != kResultTrue)
             {
-                if (q->getPointCount() <= 0) continue;
-                int32 offset = 0;
-                ParamValue v = 0.0;
-                if (q->getPoint(q->getPointCount() - 1, offset, v) != kResultTrue) continue;
-                applyParameter(q->getParameterId(), (float)v);
+                --activeQueues;
+                continue;
             }
         }
     }
@@ -303,6 +319,29 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
     for (int32 s = 0; s < data.numSamples; ++s)
     {
+        // Apply every automation point whose sample offset has been reached.
+        // Multiple points at the same offset resolve in host-provided queue order.
+        for (int32 qIndex = 0; qIndex < activeQueues; ++qIndex)
+        {
+            while (pointIndex[qIndex] < pointCount[qIndex] &&
+                   nextOffset[qIndex] <= s)
+            {
+                applyParameter(paramQueues[qIndex]->getParameterId(),
+                               (float)nextValue[qIndex]);
+
+                ++pointIndex[qIndex];
+                if (pointIndex[qIndex] < pointCount[qIndex])
+                {
+                    if (paramQueues[qIndex]->getPoint(pointIndex[qIndex],
+                                                     nextOffset[qIndex],
+                                                     nextValue[qIndex]) != kResultTrue)
+                    {
+                        pointIndex[qIndex] = pointCount[qIndex];
+                    }
+                }
+            }
+        }
+
         const float xL = in[0][s];
         const float xR = in[1][s];
 
