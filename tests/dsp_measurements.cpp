@@ -372,7 +372,7 @@ int main()
         stateSetup.sampleRate = 48000.0;
         p.setupProcessing(stateSetup);
         require(p.getLatencySamples()==0, "Reported latency is 0 samples", failures);
-        require(p.getTailSamples()==5760000u, "Reported reverb tail is 120 seconds at 48 kHz", failures);
+        require(p.getTailSamples()==7200000u, "Reported reverb tail is 150 seconds at 48 kHz", failures);
 
         Steinberg::MemoryStream state;
         p.setTestParameter(UglyReverb::kDecay, 0.93f);
