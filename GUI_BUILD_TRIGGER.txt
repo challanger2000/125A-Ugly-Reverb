@@ -1,0 +1,1 @@
+Verify value formatting, hardware knobs, Digital Color layout and GUI zoom buttons.
