@@ -1,0 +1,1 @@
+Verify vector fixed-pivot bypass toggle, high-resolution knob resource, and Digital Color selector.
