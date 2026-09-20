@@ -21,7 +21,7 @@ jobs:
       - name: Build Release + Tests + Validator
         shell: pwsh
         run: |
-          cmake --build build --config Release --target UglyReverb UglyReverbMeasurements validator --parallel
+          cmake --build build --config Release --target UglyReverb UglyReverbMeasurements UglyReverbReloadProbe validator --parallel
 
       - name: DSP Measurements
         shell: pwsh
@@ -36,6 +36,17 @@ jobs:
           if (-not $plugin) { Write-Error "UglyReverb.vst3 not found"; exit 1 }
           if (-not $validator) { Write-Error "validator.exe not found"; exit 1 }
           & $validator.FullName $plugin.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+
+      - name: Reload lifecycle diagnostic
+        shell: pwsh
+        run: |
+          $plugin = Get-ChildItem -Path build -Recurse -Directory -Filter "UglyReverb.vst3" | Select-Object -First 1
+          $probe = Get-ChildItem -Path build -Recurse -File -Filter "UglyReverbReloadProbe.exe" | Select-Object -First 1
+          if (-not $plugin) { Write-Error "UglyReverb.vst3 not found"; exit 1 }
+          if (-not $probe) { Write-Error "UglyReverbReloadProbe.exe not found"; exit 1 }
+          & $probe.FullName $plugin.FullName
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Collect VST3
