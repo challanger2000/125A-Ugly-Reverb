@@ -87,6 +87,31 @@ def write_png(path,buf):
     with open(path,"wb") as f:
         f.write(payload)
 
+def mask_wear_to_panel_interiors(buf, panels, inset=6, radius=7):
+    # Keep wear strictly inside the blue module faces so the blue border remains clean.
+    def inside_round_rect(x,y,l,t,r,b,rad):
+        if x < l or x >= r or y < t or y >= b:
+            return False
+        if l+rad <= x < r-rad or t+rad <= y < b-rad:
+            return True
+        cx = l+rad if x < l+rad else r-rad-1
+        cy = t+rad if y < t+rad else b-rad-1
+        dx=x-cx; dy=y-cy
+        return dx*dx+dy*dy <= rad*rad
+
+    for y in range(H):
+        for x in range(W):
+            keep=False
+            for l,t,r,b in panels:
+                il, it, ir, ib = l+inset, t+inset, r-inset, b-inset
+                if inside_round_rect(x,y,il,it,ir,ib,radius):
+                    keep=True
+                    break
+            if not keep:
+                i=(y*W+x)*4
+                buf[i+3]=0
+    return buf
+
 def generate_wear():
     buf=blank()
     panels=[(16,70,278,414),(288,70,618,414),(628,70,744,414)]
@@ -126,7 +151,7 @@ def generate_wear():
             ln=rng.uniform(13,42); slope=rng.uniform(-0.18,0.18)
             alpha=rng.randint(22,48)
             line(buf,x,y,x+ln,y+slope*ln,(214,220,222,alpha),1,True,rng)
-    return buf
+    return mask_wear_to_panel_interiors(buf, panels, inset=6, radius=7)
 
 def generate_glass():
     buf=blank()
