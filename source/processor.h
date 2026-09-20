@@ -18,6 +18,7 @@ public:
     Steinberg::tresult PLUGIN_API setProcessing(Steinberg::TBool state) override;
     Steinberg::tresult PLUGIN_API setupProcessing(Steinberg::Vst::ProcessSetup& setup) override;
     Steinberg::tresult PLUGIN_API canProcessSampleSize(Steinberg::int32 symbolicSampleSize) override;
+    Steinberg::uint32 PLUGIN_API getTailSamples() override;
     Steinberg::tresult PLUGIN_API setBusArrangements(Steinberg::Vst::SpeakerArrangement* inputs, Steinberg::int32 numIns,
                                                      Steinberg::Vst::SpeakerArrangement* outputs, Steinberg::int32 numOuts) override;
     Steinberg::tresult PLUGIN_API process(Steinberg::Vst::ProcessData& data) override;
@@ -45,6 +46,7 @@ private:
     static constexpr int kAllpasses = 4;
 
     void resetDsp();
+    void clearDsp();
     void resetSmoothers();
     void applyParameter(Steinberg::Vst::ParamID id, float value);
     float processDigital(float x) const;
