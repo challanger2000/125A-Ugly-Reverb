@@ -206,6 +206,84 @@ void UglyKnob::draw(VSTGUI::CDrawContext* c)
     setDirty(false);
 }
 
+
+UglySelector::UglySelector(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag,
+                           std::vector<std::string> labels)
+: CControl(r,l,tag,nullptr),labels_(std::move(labels))
+{
+    setTransparency(true);
+    setWantsFocus(true);
+}
+
+UglySelector::UglySelector(const UglySelector& o)
+: CControl(o),labels_(o.labels_) {}
+
+void UglySelector::draw(VSTGUI::CDrawContext* c)
+{
+    const auto r=getViewSize();
+    if(labels_.empty()) { setDirty(false); return; }
+
+    c->setDrawMode(VSTGUI::kAntiAliasing);
+    c->setFillColor({10,10,9,225});
+    c->drawRect(r,VSTGUI::kDrawFilled);
+    c->setFrameColor({86,80,68,220});
+    c->setLineWidth(1.0);
+    c->drawRect(r,VSTGUI::kDrawStroked);
+
+    VSTGUI::CRect inner=r;
+    inner.inset(3.0,3.0);
+    const int count=static_cast<int>(labels_.size());
+    const int selected=std::clamp(
+        static_cast<int>(std::lround(getValueNormalized()*static_cast<double>(std::max(1,count-1)))),
+        0,count-1);
+    const double segW=inner.getWidth()/static_cast<double>(count);
+
+    c->setFont(VSTGUI::kNormalFont,8.0,VSTGUI::kBoldFace);
+    for(int i=0;i<count;++i) {
+        VSTGUI::CRect seg(inner.left+i*segW,inner.top,
+                          i==count-1?inner.right:inner.left+(i+1)*segW,inner.bottom);
+        VSTGUI::CRect face=seg;
+        face.inset(1.0,1.0);
+        if(i==selected) {
+            c->setFillColor({112,88,49,255});
+            c->drawRect(face,VSTGUI::kDrawFilled);
+            c->setFrameColor({205,177,117,210});
+            c->drawRect(face,VSTGUI::kDrawStroked);
+            c->setFontColor({247,239,216,255});
+        } else {
+            c->setFillColor({35,35,32,255});
+            c->drawRect(face,VSTGUI::kDrawFilled);
+            c->setFrameColor({73,69,61,180});
+            c->drawRect(face,VSTGUI::kDrawStroked);
+            c->setFontColor({174,169,153,255});
+        }
+        c->drawString(VSTGUI::UTF8String(labels_[i].c_str()),face,VSTGUI::kCenterText);
+    }
+    setDirty(false);
+}
+
+VSTGUI::CMouseEventResult UglySelector::onMouseDown(VSTGUI::CPoint& where,
+                                                     const VSTGUI::CButtonState& buttons)
+{
+    if(!buttons.isLeftButton()||labels_.empty())
+        return VSTGUI::kMouseEventNotHandled;
+    const auto r=getViewSize();
+    if(!r.pointInside(where))
+        return VSTGUI::kMouseEventNotHandled;
+
+    const int count=static_cast<int>(labels_.size());
+    const double normalized=(where.x-r.left)/std::max(1.0,r.getWidth());
+    const int index=std::clamp(static_cast<int>(normalized*count),0,count-1);
+    const float value=count<=1?0.f:static_cast<float>(index)/static_cast<float>(count-1);
+
+    beginEdit();
+    setValueNormalized(value);
+    valueChanged();
+    endEdit();
+    invalid();
+    return VSTGUI::kMouseDownEventHandledButDontNeedMovedOrUpEvents;
+}
+
 UglyToggle::UglyToggle(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag,
                        VSTGUI::CBitmap* offBitmap,VSTGUI::CBitmap* onBitmap)
 : COnOffButton(r,l,tag,nullptr),off_(offBitmap),on_(onBitmap)
@@ -222,20 +300,18 @@ void UglyToggle::draw(VSTGUI::CDrawContext* c)
     const bool on=getValueNormalized()>=0.5;
     c->setDrawMode(VSTGUI::kAntiAliasing);
 
-    // The generated OFF/ON masters do not use the same transparent framing.
-    // Crop to the actual visible hardware in each embedded 60x60 bitmap, then
-    // render both states into the same physical envelope so the switch cannot
-    // jump or clip when toggled.
-    VSTGUI::CRect dst=r;
-    dst.inset(4.0,4.0);
-    const VSTGUI::CRect src = on
-        ? VSTGUI::CRect(1.0,3.0,44.0,57.0)
-        : VSTGUI::CRect(0.0,2.0,60.0,58.0);
-
     auto* bitmap=on?on_:off_;
-    if(bitmap && bitmap->isLoaded())
+    if(bitmap && bitmap->isLoaded()) {
+        // Both 887x887 source masters were generated with different framing.
+        // These equal-size 700x700 crops align the mechanical pivot while
+        // retaining the high-resolution source for 100-200% editor zoom.
+        const VSTGUI::CRect src = on
+            ? VSTGUI::CRect(23.0,105.0,723.0,805.0)
+            : VSTGUI::CRect(147.0,82.0,847.0,782.0);
+        VSTGUI::CRect dst=r;
+        dst.inset(2.0,1.0);
         c->fillRectWithBitmap(bitmap,src,dst,1.f);
-
+    }
     setDirty(false);
 }
 
