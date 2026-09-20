@@ -102,7 +102,7 @@ void UglyFaceplate::draw(VSTGUI::CDrawContext* c)
     // One neutral worn metal plate. No baked control boxes.
     for(int y=0;y<static_cast<int>(r.getHeight());++y) {
         const uint8_t shade=static_cast<uint8_t>(31 + ((y/7)%3));
-        c->setFrameColor({shade,shade,shade-2,255});
+        c->setFrameColor({shade,shade,static_cast<uint8_t>(shade-2),255});
         c->setLineWidth(1.0);
         c->drawLine({r.left,r.top+y},{r.right,r.top+y});
     }
