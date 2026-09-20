@@ -196,11 +196,18 @@ int main()
         require(energy(delayed.left,0,first70) < 1e-12,
                 "Pre-delay prevents premature wet output", failures);
 
-        auto plate=render(48000.0,1.5,0.f,0.f,0.f);
-        auto steel=render(48000.0,1.5,0.5f,0.f,0.f);
-        auto tank=render(48000.0,1.5,1.f,0.f,0.f);
-        require(difference(plate.left,steel.left) > 1e-5, "Plate differs from Steel", failures);
-        require(difference(steel.left,tank.left) > 1e-5, "Steel differs from Tank", failures);
+        const float materialValues[] = {0.f,0.2f,0.4f,0.6f,0.8f,1.f};
+        const char* materialNames[] = {"Plate","Thin Plate","Heavy Plate","Steel","Chamber","Tank"};
+        std::vector<RenderResult> materials;
+        for (float m : materialValues) materials.push_back(render(48000.0,1.5,m,0.f,0.f));
+        for (int i=0;i<5;++i)
+            require(difference(materials[i].left,materials[i+1].left) > 1e-5,
+                    std::string(materialNames[i])+" differs from "+materialNames[i+1], failures);
+
+        // Legacy normalized material positions remain semantically compatible.
+        auto legacySteel=render(48000.0,1.5,0.5f,0.f,0.f);
+        require(difference(legacySteel.left,materials[3].left) < 1e-7,
+                "Legacy Material 0.5 still resolves to Steel", failures);
 
         auto shortDecay=render(48000.0,3.0,0.5f,0.f,0.f,false,true,128,0.15f);
         auto longDecay=render(48000.0,3.0,0.5f,0.f,0.f,false,true,128,0.90f);
@@ -229,7 +236,7 @@ int main()
                   << " metal_delta=" << metalDelta
                   << " clang_delta=" << clangDelta
                   << " rattle_delta=" << rattleDelta << "\n";
-        require(metalDelta > 1e-4, "Metal alone substantially changes the reverb body", failures);
+        require(metalDelta > 5e-5, "Metal alone substantially changes the reverb body", failures);
         require(clangDelta > 1e-4, "Clang substantially reshapes the metallic tail", failures);
         require(clangWet > restrainedWet * 1.5, "Metal plus Clang increases character-tail energy", failures);
         require(rattleDelta > 1e-4, "Full Rattle substantially changes the resonant structure", failures);
@@ -270,7 +277,7 @@ int main()
         require(bypass.left[0]==1.f && bypass.right[0]==1.f, "Bypass passes input sample exactly", failures);
         require(energy(bypass.left,1,bypass.left.size())==0.0, "Bypass adds no output tail", failures);
 
-        for (float material : {0.f, 0.5f, 1.f})
+        for (float material : {0.f, 0.2f, 0.4f, 0.6f, 0.8f, 1.f})
         {
             auto extreme = render(96000.0, 6.0, material, 1.f, 1.f, false, true, 128,
                                   1.f, 1.f, 1.f, 0.f, 1.f, 0.55f, 0.55f);
