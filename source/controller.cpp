@@ -5,6 +5,7 @@
 #include "vstgui/plugin-bindings/vst3editor.h"
 #include "base/source/fstring.h"
 #include "UglyControls.h"
+#include <algorithm>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -13,6 +14,11 @@ using namespace Steinberg;
 using namespace Steinberg::Vst;
 
 namespace UglyReverb {
+namespace {
+constexpr int32 kGuiStateMagic = 0x315A4755; // "UGZ1" in little-endian storage
+constexpr int32 kGuiStateVersion = 1;
+constexpr double kGuiZoomFactors[] {1.0, 1.25, 1.5, 1.75, 2.0};
+}
 
 tresult PLUGIN_API Controller::initialize(FUnknown* context)
 {
@@ -82,6 +88,43 @@ tresult PLUGIN_API Controller::setComponentState(IBStream* state)
     return kResultOk;
 }
 
+tresult PLUGIN_API Controller::setState(IBStream* state)
+{
+    if (!state) return kResultFalse;
+
+    IBStreamer s(state, kLittleEndian);
+    int32 magic = 0;
+    if (!s.readInt32(magic)) {
+        guiZoomIndex_ = 0;
+        return kResultOk; // pre-zoom projects had no controller-private state
+    }
+    if (magic != kGuiStateMagic) {
+        guiZoomIndex_ = 0;
+        return kResultOk;
+    }
+
+    int32 version = 0;
+    int32 zoomIndex = 0;
+    if (!s.readInt32(version) || version != kGuiStateVersion)
+        return kResultOk;
+    if (!s.readInt32(zoomIndex))
+        return kResultOk;
+
+    guiZoomIndex_ = std::clamp(static_cast<int>(zoomIndex), 0, 4);
+    return kResultOk;
+}
+
+tresult PLUGIN_API Controller::getState(IBStream* state)
+{
+    if (!state) return kResultFalse;
+
+    IBStreamer s(state, kLittleEndian);
+    if (!s.writeInt32(kGuiStateMagic)) return kResultFalse;
+    if (!s.writeInt32(kGuiStateVersion)) return kResultFalse;
+    if (!s.writeInt32(static_cast<int32>(std::clamp(guiZoomIndex_, 0, 4)))) return kResultFalse;
+    return kResultOk;
+}
+
 Steinberg::IPlugView* PLUGIN_API Controller::createView(const char* name)
 {
     Steinberg::ConstString viewName(name);
@@ -89,6 +132,7 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(const char* name)
         {
         auto* editor = new VSTGUI::VST3Editor(this, "view", "ugly_reverb.uidesc");
         editor->setAllowedZoomFactors({1.0, 1.25, 1.5, 1.75, 2.0});
+        editor->setZoomFactor(kGuiZoomFactors[std::clamp(guiZoomIndex_, 0, 4)]);
         return editor;
     }
     return nullptr;
@@ -102,7 +146,7 @@ VSTGUI::CView* Controller::createCustomView(VSTGUI::UTF8StringPtr name,
     VSTGUI::CRect r(o.x,o.y,o.x+s.x,o.y+s.y);
     if(std::strcmp(name,"Faceplate")==0) return new UglyFaceplate(r);
     if(std::strcmp(name,"BrandLogo")==0) return new UglyLogo(r);
-    if(std::strcmp(name,"GuiZoom")==0) return new UglyZoomControl(r,e);
+    if(std::strcmp(name,"GuiZoom")==0) return new UglyZoomControl(r,e,&guiZoomIndex_);
     auto knob=[&](const char* n,ParamID id)->VSTGUI::CView*{
         return std::strcmp(name,n)==0?new UglyKnob(r,e,id):nullptr;
     };
