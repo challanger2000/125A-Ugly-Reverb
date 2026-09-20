@@ -1,0 +1,1 @@
+Verify registered high-resolution PNG bypass states.
