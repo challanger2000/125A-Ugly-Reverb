@@ -4,6 +4,8 @@
 #include "public.sdk/source/vst/vstparameters.h"
 #include "vstgui/plugin-bindings/vst3editor.h"
 #include "base/source/fstring.h"
+#include "UglyControls.h"
+#include <cstring>
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -80,6 +82,25 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(const char* name)
         editor->setAllowedZoomFactors({1.0, 1.25, 1.5, 1.75, 2.0});
         return editor;
     }
+    return nullptr;
+}
+
+VSTGUI::CView* Controller::createCustomView(VSTGUI::UTF8StringPtr name,
+    const VSTGUI::UIAttributes& a,const VSTGUI::IUIDescription*,VSTGUI::VST3Editor* e)
+{
+    if(!name||!e) return nullptr;
+    VSTGUI::CPoint o{0,0},s{60,60}; a.getPointAttribute("origin",o); a.getPointAttribute("size",s);
+    VSTGUI::CRect r(o.x,o.y,o.x+s.x,o.y+s.y);
+    if(std::strcmp(name,"Faceplate")==0) return new UglyFaceplate(r);
+    auto knob=[&](const char* n,ParamID id)->VSTGUI::CView*{return std::strcmp(name,n)==0?new UglyKnob(r,e,id):nullptr;};
+    if(auto*v=knob("Material",kMaterial))return v; if(auto*v=knob("Size",kSize))return v;
+    if(auto*v=knob("Decay",kDecay))return v; if(auto*v=knob("PreDelay",kPreDelay))return v;
+    if(auto*v=knob("Diffusion",kDiffusion))return v; if(auto*v=knob("Damping",kDamping))return v;
+    if(auto*v=knob("Body",kBody))return v; if(auto*v=knob("Metal",kMetal))return v;
+    if(auto*v=knob("Clang",kClang))return v; if(auto*v=knob("Rattle",kRattle))return v;
+    if(auto*v=knob("Width",kWidth))return v; if(auto*v=knob("Digital",kDigital))return v;
+    if(auto*v=knob("Mix",kMix))return v; if(auto*v=knob("Output",kOutput))return v;
+    if(std::strcmp(name,"Bypass")==0) return new UglyToggle(r,e,kBypass);
     return nullptr;
 }
 
