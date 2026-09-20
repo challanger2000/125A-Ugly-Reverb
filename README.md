@@ -13,8 +13,8 @@ The target is not "bad reverb". The target is **controlled ugliness**: useful, r
 The first sound-probe build contains:
 
 - Stereo VST3
-- FDN-based algorithmic reverb core
-- Material: Plate / Steel / Tank
+- old-digital comb/allpass character-reverb core
+- Material: Plate / Thin Plate / Heavy Plate / Sheet / Spring / Steel / Pipe / Metal Drum / Oil Can / Chamber / Tank
 - Size
 - Decay
 - Pre-Delay
@@ -39,8 +39,16 @@ Metal, Clang and Rattle are not merely post-effects after a conventional reverb.
 
 ### Current material modes
 
-- **Plate** — dense but intentionally early-digital/metallic
+- **Plate** — dense, early-digital metallic sheet
+- **Thin Plate** — brighter, faster and lighter sheet character
+- **Heavy Plate** — denser and weightier plate body
+- **Sheet** — thin, direct, deliberately scheppernd metal
+- **Spring** — mechanical, resonant and lightly moving spring character
 - **Steel** — harder, more exposed modal structure
+- **Pipe** — narrow, tubular and strongly modal
+- **Metal Drum** — hollow metal shell / barrel-like body
+- **Oil Can** — gently unstable electromechanical-style character
+- **Chamber** — cold industrial resonant chamber
 - **Tank** — larger resonant metallic body
 
 The current branch is an early development sound probe, not a release.
