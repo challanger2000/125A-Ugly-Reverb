@@ -294,7 +294,7 @@ void UglyLogo::draw(VSTGUI::CDrawContext* c)
 namespace {
 VSTGUI::CMultiFrameBitmap* createKnobStripForSize(int logicalSize)
 {
-    const int size=(logicalSize<=54)?54:((logicalSize<=56)?56:58);
+    const int size=(logicalSize<=60)?60:((logicalSize<=62)?62:64);
     const std::string base="ugly_knob_"+std::to_string(size)+".png";
     const std::string hi="ugly_knob_"+std::to_string(size)+"#2.0x.png";
 
