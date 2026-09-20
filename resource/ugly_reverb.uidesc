@@ -13,8 +13,6 @@
   </colors>
   <bitmaps>
     <bitmap name="KnobMaster" path="ugly_reverb_knob_master.png"/>
-    <bitmap name="ToggleOff" path="ugly_reverb_toggle_off.png"/>
-    <bitmap name="ToggleOn" path="ugly_reverb_toggle_on.png"/>
   </bitmaps>
   <template background-color="Panel" class="CViewContainer" maxSize="760, 430" minSize="760, 430" mouse-enabled="true" name="view" opacity="1" origin="0, 0" size="760, 430" transparent="false">
     <view class="CView" custom-view-name="Faceplate" origin="0, 0" size="760, 430" mouse-enabled="false"/>
