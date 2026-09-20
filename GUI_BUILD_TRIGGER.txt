@@ -1,1 +1,0 @@
-Verify Win32 PNG resources, aligned bypass toggle, and Digital Color selector.
