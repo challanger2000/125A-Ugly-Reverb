@@ -117,101 +117,176 @@ void modulePanel(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r,
 
 void panelWear(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r,int variant)
 {
-    // Deliberately sparse, deterministic damage.  The goal is used industrial
-    // hardware, not a full-screen grunge texture.
-    const VSTGUI::CColor bright {184,202,214,72};
-    const VSTGUI::CColor dark   {1,7,12,120};
-    const VSTGUI::CColor oxide {126,74,47,64};
+    // Visible but controlled ageing: chipped paint exposes a cool metal edge,
+    // darker rub marks break up the clean blue surface, and a few brown traces
+    // suggest oxidation without turning the panel into comic-book rust.
+    const int strength = variant==1 ? 2 : 1;
+    const VSTGUI::CColor metal  {205,216,224,static_cast<uint8_t>(105+strength*24)};
+    const VSTGUI::CColor dark   {0,5,10,static_cast<uint8_t>(128+strength*18)};
+    const VSTGUI::CColor oxide  {142,78,42,static_cast<uint8_t>(78+strength*18)};
+    const VSTGUI::CColor rub    {7,18,30,static_cast<uint8_t>(30+strength*12)};
 
-    c->setLineWidth(1.0);
+    // Uneven worn paint patches.  These are deliberately asymmetric.
+    c->setFillColor(rub);
+    c->drawEllipse({r.left+18.0,r.top+42.0,r.left+96.0,r.top+77.0},VSTGUI::kDrawFilled);
+    c->drawEllipse({r.right-126.0,r.top+118.0,r.right-24.0,r.top+170.0},VSTGUI::kDrawFilled);
+    if(variant==1) {
+        c->setFillColor({2,10,18,58});
+        c->drawEllipse({r.left+72.0,r.top+205.0,r.left+208.0,r.top+274.0},VSTGUI::kDrawFilled);
+        c->setFillColor({65,91,111,25});
+        c->drawEllipse({r.left+138.0,r.top+18.0,r.left+300.0,r.top+86.0},VSTGUI::kDrawFilled);
+    } else {
+        c->setFillColor({53,78,99,18});
+        c->drawEllipse({r.left+88.0,r.top+214.0,r.right-28.0,r.top+276.0},VSTGUI::kDrawFilled);
+    }
+
+    c->setLineWidth(1.4);
 
     auto nick=[&](double x,double y,double len,bool vertical,const VSTGUI::CColor& color) {
         c->setFrameColor(color);
         if(vertical)
-            c->drawLine({x,y},{x+0.8,y+len});
+            c->drawLine({x,y},{x+1.1,y+len});
         else
-            c->drawLine({x,y},{x+len,y+0.8});
+            c->drawLine({x,y},{x+len,y+1.0});
     };
 
     const double shift=static_cast<double>(variant)*7.0;
-    nick(r.left+25.0+shift,r.top+1.5,9.0,false,bright);
-    nick(r.left+78.0+shift*0.6,r.top+2.2,5.0,false,dark);
-    nick(r.right-58.0-shift*0.4,r.top+1.0,11.0,false,bright);
-    nick(r.left+1.5,r.top+92.0+shift,8.0,true,dark);
-    nick(r.right-2.0,r.top+168.0-shift*0.5,7.0,true,bright);
-    nick(r.left+48.0+shift,r.bottom-2.0,13.0,false,dark);
-    nick(r.right-84.0-shift*0.5,r.bottom-1.5,8.0,false,oxide);
 
-    // A few irregular hairline scratches, all kept near the panel perimeter.
-    c->setFrameColor({196,211,221,42});
-    c->drawLine({r.left+18.0,r.top+31.0+shift},{r.left+31.0,r.top+27.0+shift});
-    c->drawLine({r.right-42.0,r.bottom-27.0-shift*0.3},{r.right-27.0,r.bottom-31.0-shift*0.3});
+    // Chipped top/bottom edges: brighter and longer than v1 so they survive
+    // normal DAW scaling.
+    nick(r.left+20.0+shift,r.top+1.2,16.0,false,metal);
+    nick(r.left+73.0+shift*0.4,r.top+1.8,8.0,false,dark);
+    nick(r.right-78.0-shift*0.4,r.top+1.0,20.0,false,metal);
+    nick(r.right-43.0-shift*0.2,r.top+2.0,7.0,false,oxide);
+    nick(r.left+1.2,r.top+82.0+shift,14.0,true,dark);
+    nick(r.left+1.0,r.top+231.0-shift*0.5,11.0,true,metal);
+    nick(r.right-1.8,r.top+145.0-shift*0.4,15.0,true,metal);
+    nick(r.right-1.0,r.bottom-88.0+shift*0.3,10.0,true,oxide);
+    nick(r.left+40.0+shift,r.bottom-1.6,22.0,false,dark);
+    nick(r.left+114.0+shift*0.5,r.bottom-1.1,13.0,false,metal);
+    nick(r.right-92.0-shift*0.4,r.bottom-1.4,15.0,false,oxide);
+
+    // Irregular scratches and scrapes.
+    c->setFrameColor({215,224,229,72});
+    c->setLineWidth(1.0);
+    c->drawLine({r.left+22.0,r.top+35.0+shift},{r.left+49.0,r.top+29.0+shift});
+    c->drawLine({r.right-58.0,r.bottom-31.0-shift*0.3},{r.right-27.0,r.bottom-38.0-shift*0.3});
+    c->drawLine({r.left+54.0,r.top+178.0},{r.left+79.0,r.top+172.0});
 
     c->setFrameColor(oxide);
-    c->drawLine({r.left+10.0,r.bottom-52.0+shift*0.25},{r.left+17.0,r.bottom-49.0+shift*0.25});
+    c->drawLine({r.left+9.0,r.bottom-58.0+shift*0.25},{r.left+24.0,r.bottom-53.0+shift*0.25});
+    c->drawLine({r.right-29.0,r.top+78.0},{r.right-18.0,r.top+82.0});
+
+    // One pronounced scrape in the central/ugly panel.
+    if(variant==1) {
+        c->setFrameColor({221,227,231,92});
+        c->setLineWidth(1.6);
+        c->drawLine({r.left+22.0,r.top+286.0},{r.right-28.0,r.top+257.0});
+        c->setFrameColor({0,5,9,88});
+        c->setLineWidth(2.2);
+        c->drawLine({r.left+24.0,r.top+289.0},{r.right-31.0,r.top+261.0});
+
+        // Small dent: dark centre with a faint metallic crescent.
+        c->setFillColor({0,5,9,68});
+        c->drawEllipse({r.right-88.0,r.top+188.0,r.right-52.0,r.top+208.0},VSTGUI::kDrawFilled);
+        c->setFrameColor({203,214,221,58});
+        c->setLineWidth(1.0);
+        c->drawArc({r.right-90.0,r.top+186.0,r.right-50.0,r.top+210.0},
+                   190.f,315.f,VSTGUI::kDrawStroked);
+    }
 }
 
 void wornControlHalo(VSTGUI::CDrawContext* c,const VSTGUI::CPoint& p,double radius,int variant)
 {
-    // Controls in the deliberately ugly section look handled more often than
-    // the rest: faint rub marks, one dark scuff, and a tiny oxidised nick.
-    const double d=radius*2.0;
+    // METAL/CLANG/RATTLE should look visibly overused.  Use multiple broken
+    // arcs instead of a perfect halo so the wear feels mechanical, not graphic.
     VSTGUI::CRect ring(p.x-radius,p.y-radius,p.x+radius,p.y+radius);
+    VSTGUI::CRect outer(p.x-radius-3.0,p.y-radius-3.0,p.x+radius+3.0,p.y+radius+3.0);
+
+    c->setLineWidth(1.6);
+    c->setFrameColor({214,221,225,72});
+    c->drawArc(ring,186.f+variant*8.f,256.f+variant*6.f,VSTGUI::kDrawStroked);
+    c->drawArc(ring,286.f+variant*6.f,333.f+variant*5.f,VSTGUI::kDrawStroked);
+
+    c->setLineWidth(2.1);
+    c->setFrameColor({0,4,8,92});
+    c->drawArc(outer,8.f+variant*10.f,91.f+variant*8.f,VSTGUI::kDrawStroked);
+
+    c->setFrameColor({148,82,43,90});
+    c->setLineWidth(1.2);
+    c->drawLine({p.x-radius*0.88,p.y+radius*0.62},
+                {p.x-radius*0.52,p.y+radius*0.43});
+    c->drawLine({p.x+radius*0.48,p.y-radius*0.80},
+                {p.x+radius*0.68,p.y-radius*0.61});
+
+    c->setFrameColor({218,225,229,66});
     c->setLineWidth(1.0);
-    c->setFrameColor({205,214,220,26});
-    c->drawArc(ring,198.f+variant*9.f,292.f+variant*7.f,VSTGUI::kDrawStroked);
-
-    VSTGUI::CRect outer(p.x-radius-2.0,p.y-radius-2.0,p.x+radius+2.0,p.y+radius+2.0);
-    c->setFrameColor({0,0,0,56});
-    c->drawArc(outer,18.f+variant*11.f,112.f+variant*8.f,VSTGUI::kDrawStroked);
-
-    c->setFrameColor({132,78,49,58});
-    c->drawLine({p.x-radius*0.78,p.y+radius*0.58},
-                {p.x-radius*0.55,p.y+radius*0.48});
+    c->drawLine({p.x-radius*0.30,p.y-radius*1.05},
+                {p.x+radius*0.18,p.y-radius*0.93});
 }
 
 void degradedPlate(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r)
 {
-    // Small battered service plate.  It makes the "ugly" concept intentional
-    // without turning the whole UI into a novelty graphic.
+    // Battered service plate: now intentionally readable at normal DAW scale.
     VSTGUI::CRect shadow=r;
-    shadow.offset(1.5,2.0);
-    fillRound(c,shadow,3.0,{0,0,0,92},{0,0,0,0},0.0);
-    gradientRound(c,r,3.0,{21,31,40,222},{8,14,20,232},{111,128,140,104},1.0);
+    shadow.offset(2.0,2.5);
+    fillRound(c,shadow,3.0,{0,0,0,118},{0,0,0,0},0.0);
+    gradientRound(c,r,3.0,{28,38,46,240},{7,12,17,244},{139,151,159,150},1.2);
 
-    // Uneven worn edge/highlight.
-    c->setLineWidth(1.0);
-    c->setFrameColor({213,220,224,54});
-    c->drawLine({r.left+12.0,r.top+1.0},{r.left+49.0,r.top+1.0});
-    c->drawLine({r.right-64.0,r.bottom-1.0},{r.right-23.0,r.bottom-1.0});
-    c->setFrameColor({128,74,45,70});
-    c->drawLine({r.left+5.0,r.bottom-7.0},{r.left+17.0,r.bottom-4.0});
+    c->setLineWidth(1.2);
+    c->setFrameColor({225,230,233,90});
+    c->drawLine({r.left+13.0,r.top+1.0},{r.left+62.0,r.top+1.0});
+    c->drawLine({r.right-78.0,r.bottom-1.0},{r.right-20.0,r.bottom-1.0});
+    c->setFrameColor({151,82,42,112});
+    c->drawLine({r.left+5.0,r.bottom-9.0},{r.left+25.0,r.bottom-4.0});
+    c->drawLine({r.right-34.0,r.top+3.0},{r.right-15.0,r.top+6.0});
 
-    // Two old fasteners, deliberately not perfectly identical.
-    c->setFillColor({58,64,69,230});
-    c->drawEllipse({r.left+6.0,r.top+6.0,r.left+11.0,r.top+11.0},VSTGUI::kDrawFilled);
-    c->drawEllipse({r.right-11.0,r.bottom-11.0,r.right-6.0,r.bottom-6.0},VSTGUI::kDrawFilled);
-    c->setFrameColor({9,11,13,220});
-    c->drawLine({r.left+6.8,r.top+8.7},{r.left+10.1,r.top+7.4});
-    c->drawLine({r.right-10.0,r.bottom-9.5},{r.right-6.8,r.bottom-7.2});
+    // Old fasteners.
+    c->setFillColor({69,74,78,245});
+    c->drawEllipse({r.left+7.0,r.top+8.0,r.left+13.0,r.top+14.0},VSTGUI::kDrawFilled);
+    c->drawEllipse({r.right-13.0,r.bottom-14.0,r.right-7.0,r.bottom-8.0},VSTGUI::kDrawFilled);
+    c->setFrameColor({6,8,10,230});
+    c->drawLine({r.left+7.7,r.top+11.5},{r.left+12.0,r.top+9.8});
+    c->drawLine({r.right-12.0,r.bottom-12.3},{r.right-7.9,r.bottom-9.2});
 
-    c->setFont(VSTGUI::kNormalFont,8.0,VSTGUI::kBoldFace);
-    c->setFontColor({170,181,188,175});
+    c->setFont(VSTGUI::kNormalFont,9.0,VSTGUI::kBoldFace);
+    c->setFontColor({202,210,215,220});
     VSTGUI::CRect title=r;
-    title.inset(18.0,4.0);
-    title.bottom=title.top+12.0;
+    title.inset(22.0,5.0);
+    title.bottom=title.top+14.0;
     c->drawString(VSTGUI::UTF8String("DEGRADED SPACE"),title,VSTGUI::kCenterText);
 
-    c->setFont(VSTGUI::kNormalFont,6.5,VSTGUI::kNormalFace);
-    c->setFontColor({111,126,137,150});
+    c->setFont(VSTGUI::kNormalFont,7.0,VSTGUI::kNormalFace);
+    c->setFontColor({143,156,165,195});
     VSTGUI::CRect sub=r;
-    sub.inset(18.0,4.0);
-    sub.top+=13.0;
+    sub.inset(22.0,5.0);
+    sub.top+=17.0;
     c->drawString(VSTGUI::UTF8String("SERVICE UNIT // 125A"),sub,VSTGUI::kCenterText);
 
-    // One intentional scrape through the lower print.
-    c->setFrameColor({205,213,218,48});
-    c->drawLine({r.left+54.0,r.bottom-7.0},{r.left+96.0,r.bottom-10.0});
+    // Scrape through the plate.
+    c->setFrameColor({226,231,234,74});
+    c->setLineWidth(1.1);
+    c->drawLine({r.left+56.0,r.bottom-9.0},{r.right-46.0,r.bottom-13.0});
+    c->setFrameColor({1,5,8,88});
+    c->drawLine({r.left+84.0,r.top+8.0},{r.left+138.0,r.top+11.0});
+}
+
+void warningStencil(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r)
+{
+    // Faded industrial marking, intentionally imperfect and low-profile.
+    c->setFont(VSTGUI::kNormalFont,7.5,VSTGUI::kBoldFace);
+    c->setFontColor({192,155,76,175});
+    c->drawString(VSTGUI::UTF8String("CAUTION // UNSTABLE"),r,VSTGUI::kCenterText);
+
+    c->setFrameColor({192,155,76,105});
+    c->setLineWidth(1.0);
+    c->drawLine({r.left+7.0,r.bottom-1.0},{r.left+47.0,r.bottom-1.0});
+    c->drawLine({r.right-38.0,r.bottom-1.0},{r.right-7.0,r.bottom-1.0});
+
+    // Worn-out gaps across the stencil.
+    c->setFrameColor({6,22,38,155});
+    c->drawLine({r.left+39.0,r.top+2.0},{r.left+55.0,r.top+2.0});
+    c->drawLine({r.right-58.0,r.top+8.0},{r.right-46.0,r.top+8.0});
 }
 
 } // namespace
@@ -257,8 +332,11 @@ void UglyFaceplate::draw(VSTGUI::CDrawContext* c)
     wornControlHalo(c,{r.left+441.0,r.top+295.0},32.0,1); // CLANG
     wornControlHalo(c,{r.left+542.0,r.top+295.0},32.0,2); // RATTLE
 
-    // Free space below the left controls becomes a small battered service plate.
-    degradedPlate(c,{r.left+36.0,r.top+366.0,r.left+258.0,r.top+401.0});
+    // Free space below the left controls becomes a more visible battered service plate.
+    degradedPlate(c,{r.left+30.0,r.top+359.0,r.left+264.0,r.top+405.0});
+
+    // Small faded warning stencil in the deliberately unstable network.
+    warningStencil(c,{r.left+374.0,r.top+216.0,r.left+532.0,r.top+232.0});
 
     // A couple of isolated chassis scratches stop the outer black shell from
     // looking factory-new while keeping the branding/header readable.
