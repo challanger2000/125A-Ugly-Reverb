@@ -2,6 +2,10 @@ name: Build Windows VST3
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ development ]
+    paths:
+      - 'GUI_BUILD_TRIGGER.txt'
 
 jobs:
   build:
@@ -57,11 +61,3 @@ jobs:
           path: artifact/
           if-no-files-found: error
           retention-days: 7
-
-
-
-
-
-
-
-
