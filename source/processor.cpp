@@ -134,6 +134,7 @@ void Processor::resetDsp()
 
 void Processor::resetSmoothers()
 {
+    smSize_ = size_;
     smDecay_ = decay_;
     smPreDelay_ = preDelay_;
     smDiffusion_ = diffusion_;
@@ -141,6 +142,7 @@ void Processor::resetSmoothers()
     smMetal_ = metal_;
     smClang_ = clang_;
     smRattle_ = rattle_;
+    smBody_ = body_;
     smWidth_ = width_;
     smMix_ = mix_;
     smOutput_ = output_;
@@ -304,6 +306,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         const float xL = in[0][s];
         const float xR = in[1][s];
 
+        smSize_ += smoothCoef * (size_ - smSize_);
         smDecay_ += smoothCoef * (decay_ - smDecay_);
         smPreDelay_ += smoothCoef * (preDelay_ - smPreDelay_);
         smDiffusion_ += smoothCoef * (diffusion_ - smDiffusion_);
@@ -311,16 +314,16 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         smMetal_ += smoothCoef * (metal_ - smMetal_);
         smClang_ += smoothCoef * (clang_ - smClang_);
         smRattle_ += smoothCoef * (rattle_ - smRattle_);
+        smBody_ += smoothCoef * (body_ - smBody_);
         smWidth_ += smoothCoef * (width_ - smWidth_);
         smMix_ += smoothCoef * (mix_ - smMix_);
         smOutput_ += smoothCoef * (output_ - smOutput_);
 
         const float outGain = std::pow(10.f, ((smOutput_ * 24.f) - 12.f) / 20.f);
 
-        // The reverb core is intentionally aggressive, so a linear wet/dry mapping
-        // makes low Mix values jump in far too quickly.  Shape only the mix control:
-        // 10% -> 1% wet, 25% -> 6.25%, 50% -> 25%, 100% -> 100%.
-        const float wet = smMix_ * smMix_;
+        // MIX is an actual wet/dry control.  The reverb core is calibrated
+        // separately below; do not hide gain correction inside the knob law.
+        const float wet = smMix_;
         const float dry = 1.f - wet;
 
         const float preSamples = std::max(0.f, std::min((float)preL_.size() - 2.f,
@@ -348,8 +351,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         float combSumL = 0.f;
         float combSumR = 0.f;
 
-        const float sizeScale = 0.58f + size_ * 1.22f;
-        const float bodySkew = 0.82f + body_ * 0.36f;
+        const float sizeScale = 0.58f + smSize_ * 1.22f;
+        const float bodySkew = 0.82f + smBody_ * 0.36f;
         const float rt60 = 0.45f * std::pow(28.f, smDecay_) * rt60Scale[mat];
         const float dampingCoef = 0.10f + (1.f - smDamping_) * 0.82f;
 
@@ -452,10 +455,10 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         wetL *= characterGain;
         wetR *= characterGain;
 
-        // Calibrate the deliberately hot character core to a usable insert-mix range.
-        // With the squared Mix law, low settings remain fine-grained while the
-        // reverb still becomes clearly audible in the normal 10-20% control region.
-        constexpr float kWetCalibration = 0.125f; // ~ -18.1 dB
+        // Calibrate the deliberately hot character core independently from MIX.
+        // -12 dB keeps full-wet usable while allowing ordinary 10-20% insert values
+        // to behave like ordinary reverb mix settings.
+        constexpr float kWetCalibration = 0.25f; // ~ -12.0 dB
         wetL *= kWetCalibration;
         wetR *= kWetCalibration;
 
