@@ -1,0 +1,1 @@
+Trigger canonical packaged VST3 verification.
