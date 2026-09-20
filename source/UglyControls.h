@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+namespace VSTGUI { class VST3Editor; }
+
 namespace UglyReverb {
 
 class UglyFaceplate final : public VSTGUI::CView {
@@ -51,6 +53,18 @@ public:
     UglyToggle(const UglyToggle& o);
     VSTGUI::CBaseObject* newCopy() const override { return new UglyToggle(*this); }
     void draw(VSTGUI::CDrawContext* c) override;
+};
+
+class UglyZoomControl final : public VSTGUI::CControl {
+public:
+    UglyZoomControl(const VSTGUI::CRect& r,VSTGUI::VST3Editor* editor);
+    UglyZoomControl(const UglyZoomControl& o);
+    VSTGUI::CBaseObject* newCopy() const override { return new UglyZoomControl(*this); }
+    void draw(VSTGUI::CDrawContext* c) override;
+    VSTGUI::CMouseEventResult onMouseDown(VSTGUI::CPoint& where,
+                                           const VSTGUI::CButtonState& buttons) override;
+private:
+    VSTGUI::VST3Editor* editor_ {nullptr};
 };
 
 } // namespace UglyReverb
