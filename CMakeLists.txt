@@ -54,7 +54,7 @@ add_executable(UglyReverbMeasurements
 )
 target_compile_definitions(UglyReverbMeasurements PRIVATE UGLY_REVERB_TESTING=1)
 target_include_directories(UglyReverbMeasurements PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-target_link_libraries(UglyReverbMeasurements PRIVATE sdk)
+target_link_libraries(UglyReverbMeasurements PRIVATE sdk vstgui_support)
 
 enable_testing()
 add_test(NAME UglyReverbMeasurements COMMAND UglyReverbMeasurements)
