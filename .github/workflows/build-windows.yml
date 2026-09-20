@@ -1,6 +1,11 @@
 name: Build Windows VST3
 
 on:
+  push:
+    branches:
+      - development
+    paths:
+      - ".github/workflows/build-windows.yml"
   workflow_dispatch:
 
 jobs:
@@ -58,3 +63,5 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+
+# mix-curve verification
