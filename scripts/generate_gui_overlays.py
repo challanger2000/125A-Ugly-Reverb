@@ -116,41 +116,68 @@ def generate_wear():
     buf=blank()
     panels=[(16,70,278,414),(288,70,618,414),(628,70,744,414)]
     rng=random.Random(12501)
+
+    # Each panel gets a few deliberate wear zones instead of evenly distributed noise.
+    cluster_specs=[
+        # left: lower-left, upper-right and one small mid cluster
+        [(42,382,34,18,1.0),(245,91,26,12,0.85),(82,214,16,24,0.65)],
+        # center: strongest, with asymmetrical edge wear and two interior zones
+        [(305,392,42,16,1.25),(590,92,34,13,1.10),(360,218,24,18,0.70),(548,304,28,19,0.78)],
+        # master: restrained wear, mostly top/right and lower edge
+        [(724,96,18,26,0.85),(650,392,25,12,0.72),(706,236,14,18,0.55)]
+    ]
+
     for pi,(l,t,r,b) in enumerate(panels):
-        strength=1.25 if pi==1 else 1.0
-        # irregular chipped edge clusters
-        for n in range(34 if pi==1 else 24):
-            side=rng.randrange(4)
+        clusters=cluster_specs[pi]
+
+        # Irregular edge chips, concentrated near cluster positions.
+        edge_count=22 if pi==1 else 14
+        for n in range(edge_count):
+            ccx,ccy,crx,cry,weight=rng.choice(clusters)
+            # choose nearest panel edge to the cluster and pull the mark toward it
+            distances=[abs(ccy-t),abs(ccy-b),abs(ccx-l),abs(ccx-r)]
+            side=distances.index(min(distances))
             if side==0:
-                cx=rng.uniform(l+5,r-5); cy=t+rng.uniform(-1,4)
-                rx=rng.uniform(2,9); ry=rng.uniform(1,4)
+                cx=max(l+6,min(r-6,rng.gauss(ccx,crx*0.55))); cy=t+rng.uniform(0,3.5)
+                rx=rng.uniform(2,8); ry=rng.uniform(1,3.5)
             elif side==1:
-                cx=rng.uniform(l+5,r-5); cy=b+rng.uniform(-4,1)
-                rx=rng.uniform(2,9); ry=rng.uniform(1,4)
+                cx=max(l+6,min(r-6,rng.gauss(ccx,crx*0.55))); cy=b-rng.uniform(0,3.5)
+                rx=rng.uniform(2,8); ry=rng.uniform(1,3.5)
             elif side==2:
-                cx=l+rng.uniform(-1,4); cy=rng.uniform(t+5,b-5)
-                rx=rng.uniform(1,4); ry=rng.uniform(2,9)
+                cx=l+rng.uniform(0,3.5); cy=max(t+6,min(b-6,rng.gauss(ccy,cry*0.55)))
+                rx=rng.uniform(1,3.5); ry=rng.uniform(2,8)
             else:
-                cx=r+rng.uniform(-4,1); cy=rng.uniform(t+5,b-5)
-                rx=rng.uniform(1,4); ry=rng.uniform(2,9)
-            color=(190,198,201,round(rng.uniform(34,75)*strength))
-            if rng.random()<0.38:
-                color=(126,72,40,round(rng.uniform(34,67)*strength))
-            blob(buf,cx,cy,rx,ry,color,12500+pi*100+n)
-        # tiny interior wear flecks
-        for n in range(24 if pi==1 else 14):
-            cx=rng.uniform(l+10,r-10); cy=rng.uniform(t+14,b-14)
-            rx=rng.uniform(0.7,2.2); ry=rng.uniform(0.6,1.8)
-            col=(150,154,151,rng.randint(18,42))
-            if rng.random()<0.28:
-                col=(133,76,43,rng.randint(20,48))
+                cx=r-rng.uniform(0,3.5); cy=max(t+6,min(b-6,rng.gauss(ccy,cry*0.55)))
+                rx=rng.uniform(1,3.5); ry=rng.uniform(2,8)
+            alpha=round(rng.uniform(36,74)*weight)
+            col=(183,191,194,alpha)
+            if rng.random()<0.34:
+                col=(120,69,40,round(alpha*0.92))
+            blob(buf,cx,cy,rx,ry,col,12500+pi*100+n)
+
+        # Clustered interior flecks, leaving large clean areas.
+        fleck_count=18 if pi==1 else 10
+        for n in range(fleck_count):
+            ccx,ccy,crx,cry,weight=rng.choice(clusters)
+            cx=max(l+10,min(r-10,rng.gauss(ccx,crx)))
+            cy=max(t+12,min(b-12,rng.gauss(ccy,cry)))
+            rx=rng.uniform(0.7,2.0); ry=rng.uniform(0.6,1.7)
+            alpha=round(rng.uniform(18,40)*weight)
+            col=(148,153,151,alpha)
+            if rng.random()<0.30:
+                col=(131,77,45,min(52,alpha+7))
             blob(buf,cx,cy,rx,ry,col,13000+pi*100+n)
-        # a few fine, broken scratches, intentionally short
-        for n in range(7 if pi==1 else 4):
-            x=rng.uniform(l+12,r-38); y=rng.uniform(t+20,b-20)
-            ln=rng.uniform(13,42); slope=rng.uniform(-0.18,0.18)
-            alpha=rng.randint(22,48)
-            line(buf,x,y,x+ln,y+slope*ln,(214,220,222,alpha),1,True,rng)
+
+        # Sparse scratches only near selected wear zones.
+        scratch_count=5 if pi==1 else 3
+        for n in range(scratch_count):
+            ccx,ccy,crx,cry,weight=rng.choice(clusters)
+            x=max(l+12,min(r-46,rng.gauss(ccx,crx)))
+            y=max(t+18,min(b-18,rng.gauss(ccy,cry)))
+            ln=rng.uniform(12,36)
+            slope=rng.uniform(-0.16,0.16)
+            line(buf,x,y,x+ln,y+slope*ln,(214,220,222,rng.randint(18,40)),1,True,rng)
+
     return mask_wear_to_panel_interiors(buf, panels, inset=6, radius=7)
 
 def generate_glass():
