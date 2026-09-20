@@ -107,7 +107,7 @@ def make(master,out_dir):
         )
     print(f"Detected {orientation} master strip: {sw}x{sh}")
     os.makedirs(out_dir,exist_ok=True)
-    for logical in (54,56,58):
+    for logical in (60,62,64):
         for scale in (1,2):
             d=logical*scale
             strip=bytearray(d*d*frames*4)
