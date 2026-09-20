@@ -1,0 +1,1 @@
+GUI verification after layout and zoom integration.
