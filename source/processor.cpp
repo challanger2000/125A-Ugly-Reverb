@@ -334,8 +334,11 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             fb = std::max(0.20f, std::min(0.991f, fb));
 
             const float drive = 1.f + smMetal_ * 1.9f + smClang_ * 1.4f;
-            const float writeL = std::tanh((exciteL * (0.20f + 0.055f * i) + fL * fb) * drive) / drive;
-            const float writeR = std::tanh((exciteR * (0.20f + 0.055f * i) + fR * fb) * drive) / drive;
+            // Do not normalise the deliberate ugliness back out.  sqrt(drive) keeps
+            // the loop bounded while allowing high METAL/CLANG to become audibly fierce.
+            const float driveNorm = std::sqrt(drive);
+            const float writeL = std::tanh((exciteL * (0.20f + 0.055f * i) + fL * fb) * drive) / driveNorm;
+            const float writeR = std::tanh((exciteR * (0.20f + 0.055f * i) + fR * fb) * drive) / driveNorm;
 
             combL_[i].push(processDigital(writeL));
             combR_[i].push(processDigital(writeR));
