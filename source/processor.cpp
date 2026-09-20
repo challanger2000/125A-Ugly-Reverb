@@ -362,14 +362,29 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         // but intentionally stop before the tail becomes modern/smooth.
         float apOutL = combSumL;
         float apOutR = combSumR;
-        const float apFeedback = 0.34f + smDiffusion_ * 0.34f + smMetal_ * 0.10f + diffusionBias[mat];
+
+        // DIFFUSION controls echo density, not metallic resonance.  The allpass
+        // feedback is now mostly a material/METAL property; Diffusion progressively
+        // blends in each serial stage instead of making the stages ring harder.
+        const float apFeedback = std::min(0.76f,
+            0.42f + smMetal_ * 0.12f + diffusionBias[mat] * 0.35f);
         for (int i = 0; i < kAllpasses; ++i)
         {
             const float uglyScale = 1.f - smMetal_ * (0.10f + 0.035f * i);
             const float dL = apMs[mat][i] * uglyScale * 0.001f * (float)sampleRate_;
             const float dR = dL + 11.f + 4.f * (float)i;
-            apOutL = processAllpass(apL_[i], apOutL, dL, std::min(0.82f, apFeedback));
-            apOutR = processAllpass(apR_[i], apOutR, dR, std::min(0.82f, apFeedback));
+
+            const float stageL = processAllpass(apL_[i], apOutL, dL, apFeedback);
+            const float stageR = processAllpass(apR_[i], apOutR, dR, apFeedback);
+
+            // Earlier stages enter first; later stages require progressively more
+            // Diffusion.  Smooth ramps avoid switching/clicking while preserving
+            // the deliberately coarse low-Diffusion character.
+            const float threshold = 0.12f + 0.18f * (float)i;
+            const float stageMix = std::max(0.f, std::min(1.f,
+                (smDiffusion_ - threshold) / 0.28f));
+            apOutL = lerp(apOutL, stageL, stageMix);
+            apOutR = lerp(apOutR, stageR, stageMix);
         }
 
         // At high METAL/CLANG the raw comb bank is deliberately leaked back in.
