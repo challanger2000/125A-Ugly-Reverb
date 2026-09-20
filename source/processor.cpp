@@ -96,6 +96,15 @@ tresult PLUGIN_API Processor::setActive(TBool state)
     return AudioEffect::setActive(state);
 }
 
+tresult PLUGIN_API Processor::setProcessing(TBool state)
+{
+    // AudioEffect::setProcessing() returns kNotImplemented by default.
+    // This processor supports the standard start/stop processing transition,
+    // so acknowledge it explicitly while still letting the base class observe it.
+    AudioEffect::setProcessing(state);
+    return kResultTrue;
+}
+
 tresult PLUGIN_API Processor::canProcessSampleSize(int32 symbolicSampleSize)
 {
     return symbolicSampleSize == kSample32 ? kResultTrue : kResultFalse;
