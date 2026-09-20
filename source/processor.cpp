@@ -216,42 +216,60 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
     const float smoothCoef = 1.f - std::exp(-1.f / std::max(1.f, 0.012f * (float)sampleRate_));
 
-    // Delays intentionally avoid the evenly-spaced, highly-decorrelated design of modern reverbs.
-    // Three related sets create Plate / Steel / Tank flavours while preserving obvious modes.
-    static constexpr float baseMs[3][kCombs] = {
-        {23.1f, 27.8f, 31.7f, 36.4f, 41.9f, 47.3f, 53.6f, 61.2f},
-        {17.8f, 22.6f, 28.3f, 34.7f, 42.1f, 51.8f, 63.4f, 78.6f},
-        {31.6f, 39.3f, 48.7f, 59.8f, 73.1f, 88.4f, 104.7f, 126.3f}
+    // Six deliberately non-modern material networks.  The old normalized points
+    // remain meaningful: 0.0 = Plate, 0.5 = Steel, 1.0 = Tank.
+    // New discrete positions are Plate / Thin Plate / Heavy Plate / Steel / Chamber / Tank.
+    static constexpr int kMaterials = 6;
+    static constexpr float baseMs[kMaterials][kCombs] = {
+        {23.1f, 27.8f, 31.7f, 36.4f, 41.9f, 47.3f, 53.6f, 61.2f},   // Plate
+        {14.8f, 18.1f, 21.7f, 26.4f, 31.2f, 37.9f, 45.6f, 55.1f},   // Thin Plate
+        {28.4f, 33.9f, 39.6f, 46.8f, 55.3f, 65.1f, 76.7f, 90.4f},   // Heavy Plate
+        {17.8f, 22.6f, 28.3f, 34.7f, 42.1f, 51.8f, 63.4f, 78.6f},   // Steel
+        {20.6f, 26.9f, 34.1f, 43.8f, 55.7f, 69.4f, 86.2f, 107.5f},  // Chamber
+        {31.6f, 39.3f, 48.7f, 59.8f, 73.1f, 88.4f,104.7f,126.3f}    // Tank
     };
-    static constexpr float uglyMs[3][kCombs] = {
+    static constexpr float uglyMs[kMaterials][kCombs] = {
         {7.3f,  9.8f, 12.7f, 16.9f, 22.4f, 29.1f, 37.8f, 49.6f},
+        {4.2f,  5.9f,  8.1f, 11.2f, 15.6f, 21.8f, 30.4f, 42.7f},
+        {8.6f, 11.9f, 15.8f, 21.3f, 28.7f, 38.5f, 51.4f, 68.2f},
         {5.9f,  8.4f, 11.6f, 15.7f, 21.3f, 28.9f, 39.4f, 54.1f},
+        {6.8f,  9.6f, 13.7f, 19.4f, 27.2f, 38.1f, 53.6f, 74.9f},
         {9.1f, 12.8f, 17.6f, 24.3f, 33.7f, 46.2f, 63.9f, 86.7f}
     };
-    static constexpr float apMs[3][kAllpasses] = {
-        {4.7f, 7.1f, 10.9f, 15.8f},
-        {3.8f, 6.2f,  9.6f, 14.1f},
-        {5.9f, 8.7f, 13.2f, 18.6f}
+    static constexpr float apMs[kMaterials][kAllpasses] = {
+        {4.7f, 7.1f,10.9f,15.8f},
+        {2.9f, 4.6f, 7.4f,11.2f},
+        {5.3f, 8.0f,12.1f,17.3f},
+        {3.8f, 6.2f, 9.6f,14.1f},
+        {4.2f, 6.9f,10.8f,16.4f},
+        {5.9f, 8.7f,13.2f,18.6f}
     };
 
-    // Each material deliberately has a different failure mode:
-    // Plate = dense metallic sheet, Steel = hard modal clang, Tank = coarse hollow ring.
-    static constexpr float clangShape[3][kCombs] = {
-        {0.42f, 0.74f, 0.18f, 0.66f, 0.82f, 0.28f, 0.71f, 0.12f},
-        {0.08f, 1.00f,-0.16f, 0.72f, 1.00f, 0.03f, 0.91f,-0.12f},
-        {0.22f, 0.81f,-0.08f, 1.00f, 0.58f, 0.18f, 0.97f, 0.05f}
+    // Each material has a distinct resonant fingerprint rather than a simple EQ/gain change.
+    static constexpr float clangShape[kMaterials][kCombs] = {
+        {0.42f,0.74f,0.18f,0.66f,0.82f,0.28f,0.71f,0.12f},
+        {0.68f,0.92f,0.31f,0.83f,1.00f,0.42f,0.88f,0.22f},
+        {0.35f,0.79f,0.11f,0.72f,0.86f,0.24f,0.76f,0.08f},
+        {0.08f,1.00f,-0.16f,0.72f,1.00f,0.03f,0.91f,-0.12f},
+        {0.18f,0.87f,-0.05f,0.94f,0.49f,0.21f,1.00f,0.02f},
+        {0.22f,0.81f,-0.08f,1.00f,0.58f,0.18f,0.97f,0.05f}
     };
-    static constexpr float combWeight[3][kCombs] = {
+    static constexpr float combWeight[kMaterials][kCombs] = {
         {0.92f,0.88f,0.96f,0.90f,0.94f,0.89f,0.93f,0.91f},
+        {0.96f,1.02f,0.90f,1.05f,0.93f,1.01f,0.89f,0.98f},
+        {0.88f,0.95f,1.02f,0.91f,1.00f,0.94f,0.97f,0.90f},
         {0.62f,1.16f,0.58f,0.96f,1.22f,0.66f,1.08f,0.61f},
+        {0.70f,1.05f,0.72f,1.11f,0.78f,0.97f,1.14f,0.69f},
         {0.78f,1.02f,0.70f,1.12f,0.76f,0.94f,1.18f,0.72f}
     };
-    static constexpr float rt60Scale[3] = {0.92f, 1.00f, 1.18f};
-    static constexpr float diffusionBias[3] = {0.10f, -0.05f, -0.10f};
-    static constexpr float rawLeakScale[3] = {0.72f, 1.18f, 1.06f};
-    static constexpr float materialGain[3] = {1.00f, 1.14f, 1.08f};
+    static constexpr float rt60Scale[kMaterials]      = {0.92f,0.80f,1.08f,1.00f,1.10f,1.18f};
+    static constexpr float diffusionBias[kMaterials]  = {0.10f,0.14f,0.08f,-0.05f,0.00f,-0.10f};
+    static constexpr float rawLeakScale[kMaterials]   = {0.72f,0.82f,0.68f,1.18f,0.96f,1.06f};
+    static constexpr float materialGain[kMaterials]   = {1.00f,1.02f,1.04f,1.14f,1.08f,1.08f};
+    static constexpr float clangDepth[kMaterials]     = {0.050f,0.060f,0.052f,0.074f,0.064f,0.066f};
 
-    const int mat = std::max(0, std::min(2, (int)std::lround(material_ * 2.f)));
+    const int mat = std::max(0, std::min(kMaterials - 1,
+        (int)std::lround(material_ * (float)(kMaterials - 1))));
 
     for (int32 s = 0; s < data.numSamples; ++s)
     {
@@ -335,8 +353,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             float fb = std::pow(10.f, -3.f * delaySeconds / rt60);
 
             // CLANG intentionally makes selected modes dominate instead of equalising them away.
-            const float clangDepth = mat == 0 ? 0.050f : (mat == 1 ? 0.074f : 0.066f);
-            fb += smClang_ * clangShape[mat][i] * clangDepth;
+            fb += smClang_ * clangShape[mat][i] * clangDepth[mat];
             fb = std::max(0.20f, std::min(0.991f, fb));
 
             // Drive the excitation hard, but never multiply the feedback-loop slope.
