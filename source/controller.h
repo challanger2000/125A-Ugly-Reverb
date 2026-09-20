@@ -10,6 +10,7 @@ public:
 
     Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown* context) override;
     Steinberg::tresult PLUGIN_API setComponentState(Steinberg::IBStream* state) override;
+    Steinberg::IPlugView* PLUGIN_API createView(const char* name) override;
 };
 
 } // namespace UglyReverb
