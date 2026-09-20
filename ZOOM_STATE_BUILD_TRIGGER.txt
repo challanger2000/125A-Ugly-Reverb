@@ -1,1 +1,0 @@
-Verify per-project GUI zoom persistence.
