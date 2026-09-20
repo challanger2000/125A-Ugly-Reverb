@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace VSTGUI { class VST3Editor; }
+namespace VSTGUI { class VST3Editor; class CBitmap; }
 
 namespace UglyReverb {
 
@@ -18,12 +18,17 @@ public:
     void draw(VSTGUI::CDrawContext* c) override;
 };
 
-class UglyGlassOverlay final : public VSTGUI::CView {
+class UglyTextureOverlay final : public VSTGUI::CView {
 public:
-    explicit UglyGlassOverlay(const VSTGUI::CRect& r);
-    UglyGlassOverlay(const UglyGlassOverlay& o) : VSTGUI::CView(o) {}
-    VSTGUI::CBaseObject* newCopy() const override { return new UglyGlassOverlay(*this); }
+    UglyTextureOverlay(const VSTGUI::CRect& r,const char* resourceName,float alpha=1.f);
+    UglyTextureOverlay(const UglyTextureOverlay& o);
+    ~UglyTextureOverlay() noexcept override;
+    VSTGUI::CBaseObject* newCopy() const override { return new UglyTextureOverlay(*this); }
     void draw(VSTGUI::CDrawContext* c) override;
+private:
+    std::string resourceName_;
+    float alpha_ {1.f};
+    VSTGUI::CBitmap* bitmap_ {nullptr};
 };
 
 class UglyLogo final : public VSTGUI::CView {
