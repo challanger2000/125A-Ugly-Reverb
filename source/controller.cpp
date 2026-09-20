@@ -6,6 +6,8 @@
 #include "base/source/fstring.h"
 #include "UglyControls.h"
 #include <cstring>
+#include <string>
+#include <vector>
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
