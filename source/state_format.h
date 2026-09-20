@@ -5,7 +5,7 @@
 
 namespace UglyReverb {
 
-constexpr Steinberg::int32 kComponentStateMagic = 0x31524755; // "UGR1"
+constexpr Steinberg::int32 kComponentStateMagic = 0x7FC14755; // quiet-NaN bit pattern: cannot collide with a valid normalized legacy Material value
 constexpr Steinberg::int32 kComponentStateVersion = 1;
 constexpr int kComponentStateValueCount = 14;
 
