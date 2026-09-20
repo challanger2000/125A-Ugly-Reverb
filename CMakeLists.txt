@@ -43,6 +43,20 @@ foreach(UGLY_BRANDING_TAG IN LISTS UGLY_BRANDING_PATH_TAGS)
 endforeach()
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/source/branding_master.h.in" "${CMAKE_BINARY_DIR}/branding_master.h" @ONLY)
 
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+set(UGLY_GENERATED_RESOURCE_DIR "${CMAKE_BINARY_DIR}/generated_resources")
+file(MAKE_DIRECTORY "${UGLY_GENERATED_RESOURCE_DIR}")
+execute_process(
+  COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_gui_overlays.py" "${UGLY_GENERATED_RESOURCE_DIR}"
+  RESULT_VARIABLE UGLY_OVERLAY_RESULT
+  OUTPUT_VARIABLE UGLY_OVERLAY_OUTPUT
+  ERROR_VARIABLE UGLY_OVERLAY_ERROR
+)
+if(NOT UGLY_OVERLAY_RESULT EQUAL 0)
+  message(FATAL_ERROR "Failed to generate GUI overlays: ${UGLY_OVERLAY_ERROR}")
+endif()
+message(STATUS "${UGLY_OVERLAY_OUTPUT}")
+
 
 smtg_add_vst3plugin(UglyReverb
   source/version.h
@@ -65,6 +79,8 @@ smtg_target_add_plugin_resources(UglyReverb
   RESOURCES
     resource/ugly_reverb.uidesc
     resource/125A_Logo_Master_FINAL.svg
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_wear_overlay.png"
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_glass_overlay.png"
 )
 
 smtg_target_configure_version_file(UglyReverb)
