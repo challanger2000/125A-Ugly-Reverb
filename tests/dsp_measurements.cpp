@@ -1,5 +1,6 @@
 #include "processor.h"
 #include "parameters.h"
+#include "state_format.h"
 
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "public.sdk/source/common/memorystream.h"
@@ -152,6 +153,83 @@ RenderResult render(double sr, double seconds, float material, float preDelay, f
     return rr;
 }
 
+RenderResult renderMaterialAutomationAtZero(double sr, double seconds, float material)
+{
+    constexpr int block = 128;
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        throw std::runtime_error("Processor initialize failed");
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk)
+        throw std::runtime_error("setupProcessing failed");
+    p.setTestParameter(UglyReverb::kMix, 1.f);
+    p.setTestParameter(UglyReverb::kOutput, 0.5f);
+    if (p.setActive(true) != kResultOk)
+        throw std::runtime_error("setActive failed");
+
+    const size_t total=(size_t)std::llround(sr*seconds);
+    RenderResult rr;
+    rr.left.assign(total,0.f);
+    rr.right.assign(total,0.f);
+
+    std::vector<float> inL(block,0.f), inR(block,0.f), outL(block,0.f), outR(block,0.f);
+    float* inPtrs[2]={inL.data(),inR.data()};
+    float* outPtrs[2]={outL.data(),outR.data()};
+    AudioBusBuffers inBus {}; inBus.numChannels=2; inBus.channelBuffers32=inPtrs;
+    AudioBusBuffers outBus {}; outBus.numChannels=2; outBus.channelBuffers32=outPtrs;
+
+    bool first=true;
+    size_t pos=0;
+    while(pos<total)
+    {
+        const int n=(int)std::min<size_t>(block,total-pos);
+        std::fill(inL.begin(),inL.end(),0.f);
+        std::fill(inR.begin(),inR.end(),0.f);
+        std::fill(outL.begin(),outL.end(),0.f);
+        std::fill(outR.begin(),outR.end(),0.f);
+        if(first) { inL[0]=1.f; inR[0]=1.f; }
+
+        ParameterChanges changes(1);
+        int32 queueIndex=0;
+        if(first)
+        {
+            auto* q=changes.addParameterData(UglyReverb::kMaterial,queueIndex);
+            int32 point=0;
+            q->addPoint(0,material,point);
+        }
+
+        ProcessData data {};
+        data.processMode=kRealtime;
+        data.symbolicSampleSize=kSample32;
+        data.numSamples=n;
+        data.numInputs=1;
+        data.numOutputs=1;
+        data.inputs=&inBus;
+        data.outputs=&outBus;
+        data.inputParameterChanges=first?&changes:nullptr;
+
+        if(p.process(data)!=kResultOk)
+            throw std::runtime_error("process failed");
+
+        for(int i=0;i<n;++i)
+        {
+            rr.left[pos+i]=outL[i];
+            rr.right[pos+i]=outR[i];
+        }
+        first=false;
+        pos+=(size_t)n;
+    }
+
+    p.setActive(false);
+    p.terminate();
+    return rr;
+}
+
 void require(bool cond, const std::string& msg, int& failures)
 {
     if(cond) std::cout << "[PASS] " << msg << "\n";
@@ -286,7 +364,14 @@ int main()
 
         Processor p;
         p.initialize(nullptr);
+        ProcessSetup stateSetup {};
+        stateSetup.processMode = kRealtime;
+        stateSetup.symbolicSampleSize = kSample32;
+        stateSetup.maxSamplesPerBlock = 128;
+        stateSetup.sampleRate = 48000.0;
+        p.setupProcessing(stateSetup);
         require(p.getLatencySamples()==0, "Reported latency is 0 samples", failures);
+        require(p.getTailSamples()==960000u, "Reported reverb tail is 20 seconds at 48 kHz", failures);
 
         Steinberg::MemoryStream state;
         p.setTestParameter(UglyReverb::kDecay, 0.93f);
@@ -294,13 +379,46 @@ int main()
         p.setTestParameter(UglyReverb::kMix, 0.67f);
         require(p.getState(&state)==kResultOk, "State serialization succeeds", failures);
         state.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
+        Steinberg::IBStreamer stateReader(&state, Steinberg::kLittleEndian);
+        Steinberg::int32 stateMagic=0, stateVersion=0;
+        require(stateReader.readInt32(stateMagic) && stateMagic==UglyReverb::kComponentStateMagic,
+                "State serialization writes component magic", failures);
+        require(stateReader.readInt32(stateVersion) && stateVersion==UglyReverb::kComponentStateVersion,
+                "State serialization writes component version", failures);
+        state.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
         Processor restored;
         restored.initialize(nullptr);
         require(restored.setState(&state)==kResultOk, "State restore succeeds", failures);
         Steinberg::MemoryStream roundtrip;
         require(restored.getState(&roundtrip)==kResultOk, "Restored state serializes again", failures);
         restored.terminate();
+
+        // Legacy pre-version state (14 floats + bypass) must remain loadable.
+        Steinberg::MemoryStream legacyState;
+        Steinberg::IBStreamer legacyWriter(&legacyState, Steinberg::kLittleEndian);
+        const float legacyValues[UglyReverb::kComponentStateValueCount] = {
+            1.0f,0.55f,0.93f,0.08f,0.45f,0.48f,0.81f,0.55f,
+            0.12f,0.55f,0.75f,0.67f,0.5f,0.0f
+        };
+        for(float value:legacyValues) legacyWriter.writeFloat(value);
+        legacyWriter.writeInt32(1);
+        legacyState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
+        Processor legacyRestored;
+        legacyRestored.initialize(nullptr);
+        require(legacyRestored.setState(&legacyState)==kResultOk,
+                "Legacy unversioned component state still restores", failures);
+        Steinberg::MemoryStream migratedState;
+        require(legacyRestored.getState(&migratedState)==kResultOk,
+                "Legacy state migrates to versioned serialization", failures);
+        legacyRestored.terminate();
         p.terminate();
+
+        // Material automation at offset 0 must affect the same sample/block as a preset value.
+        auto automatedTank=renderMaterialAutomationAtZero(48000.0,1.5,1.0f);
+        auto referenceTank=render(48000.0,1.5,1.0f,0.f,0.f,false,true,128,
+                                  0.58f,0.68f,0.55f,0.48f,0.12f,0.45f,0.55f,1.f);
+        require(difference(automatedTank.left,referenceTank.left)<1e-7,
+                "Material automation at sample 0 uses the new material in the same block", failures);
 
         // VST3 automation points must take effect at their exact sample offset.
         {
@@ -354,6 +472,103 @@ int main()
 
             automated.setActive(false);
             automated.terminate();
+        }
+
+        // Positive-length parameter-only blocks must still consume automation.
+        {
+            Processor paramOnly;
+            paramOnly.initialize(nullptr);
+            ProcessSetup setup {};
+            setup.processMode=kRealtime;
+            setup.symbolicSampleSize=kSample32;
+            setup.maxSamplesPerBlock=64;
+            setup.sampleRate=48000.0;
+            paramOnly.setupProcessing(setup);
+            paramOnly.setActive(true);
+
+            ParameterChanges changes(1);
+            int32 queueIndex=0;
+            auto* q=changes.addParameterData(UglyReverb::kBypass,queueIndex);
+            int32 point=0;
+            q->addPoint(32,1.0,point);
+
+            ProcessData noAudio {};
+            noAudio.processMode=kRealtime;
+            noAudio.symbolicSampleSize=kSample32;
+            noAudio.numSamples=64;
+            noAudio.numInputs=0;
+            noAudio.numOutputs=0;
+            noAudio.inputParameterChanges=&changes;
+            require(paramOnly.process(noAudio)==kResultOk,
+                    "Positive-length parameter-only block processes successfully", failures);
+
+            float inL[1]={0.25f}, inR[1]={0.25f}, outL[1]={0.f}, outR[1]={0.f};
+            float* inPtrs[2]={inL,inR};
+            float* outPtrs[2]={outL,outR};
+            AudioBusBuffers inBus {}; inBus.numChannels=2; inBus.channelBuffers32=inPtrs;
+            AudioBusBuffers outBus {}; outBus.numChannels=2; outBus.channelBuffers32=outPtrs;
+            ProcessData audio {};
+            audio.processMode=kRealtime;
+            audio.symbolicSampleSize=kSample32;
+            audio.numSamples=1;
+            audio.numInputs=1;
+            audio.numOutputs=1;
+            audio.inputs=&inBus;
+            audio.outputs=&outBus;
+            require(paramOnly.process(audio)==kResultOk && outL[0]==0.25f && outR[0]==0.25f,
+                    "Parameter-only block updates bypass state for following audio", failures);
+
+            paramOnly.setActive(false);
+            paramOnly.terminate();
+        }
+
+        // Restarting processing must clear an old reverb tail without allocating new buffers.
+        {
+            Processor restart;
+            restart.initialize(nullptr);
+            ProcessSetup setup {};
+            setup.processMode=kRealtime;
+            setup.symbolicSampleSize=kSample32;
+            setup.maxSamplesPerBlock=128;
+            setup.sampleRate=48000.0;
+            restart.setupProcessing(setup);
+            restart.setTestParameter(UglyReverb::kMix,1.f);
+            restart.setActive(true);
+            restart.setProcessing(true);
+
+            float inL[128] {}, inR[128] {}, outL[128] {}, outR[128] {};
+            inL[0]=1.f; inR[0]=1.f;
+            float* inPtrs[2]={inL,inR}; float* outPtrs[2]={outL,outR};
+            AudioBusBuffers inBus {}; inBus.numChannels=2; inBus.channelBuffers32=inPtrs;
+            AudioBusBuffers outBus {}; outBus.numChannels=2; outBus.channelBuffers32=outPtrs;
+            ProcessData data {};
+            data.processMode=kRealtime; data.symbolicSampleSize=kSample32; data.numSamples=128;
+            data.numInputs=1; data.numOutputs=1; data.inputs=&inBus; data.outputs=&outBus;
+            restart.process(data);
+
+            for(int block=0;block<40;++block)
+            {
+                std::fill(std::begin(inL),std::end(inL),0.f);
+                std::fill(std::begin(inR),std::end(inR),0.f);
+                restart.process(data);
+            }
+
+            restart.setProcessing(false);
+            require(restart.setProcessing(true)==kResultTrue,
+                    "setProcessing restart is acknowledged", failures);
+            std::fill(std::begin(outL),std::end(outL),0.f);
+            std::fill(std::begin(outR),std::end(outR),0.f);
+            require(restart.process(data)==kResultOk,
+                    "Audio processes after setProcessing restart", failures);
+            double restartEnergy=0.0;
+            for(float v:outL) restartEnergy+=(double)v*(double)v;
+            for(float v:outR) restartEnergy+=(double)v*(double)v;
+            require(restartEnergy<1e-20,
+                    "setProcessing(true) clears the previous reverb tail", failures);
+
+            restart.setProcessing(false);
+            restart.setActive(false);
+            restart.terminate();
         }
 
         // Bypass must be exact for a one-sample impulse.
