@@ -19,6 +19,31 @@ FetchContent_MakeAvailable(vst3sdk)
 
 smtg_enable_vst3_sdk()
 
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/resource/125A_Logo_Master_FINAL.svg" UGLY_BRANDING_SVG)
+string(REGEX MATCHALL "<path d=\\\"[^\\\"]+\\\" fill=\\\"#[0-9A-Fa-f]+\\\"/>" UGLY_BRANDING_PATH_TAGS "${UGLY_BRANDING_SVG}")
+list(LENGTH UGLY_BRANDING_PATH_TAGS UGLY_BRANDING_PATH_COUNT)
+if(NOT UGLY_BRANDING_PATH_COUNT EQUAL 30)
+  message(FATAL_ERROR "125A branding master must contain exactly 30 vector paths; found ${UGLY_BRANDING_PATH_COUNT}.")
+endif()
+set(UGLY_BRANDING_PATHS "")
+foreach(UGLY_BRANDING_TAG IN LISTS UGLY_BRANDING_PATH_TAGS)
+  if(NOT UGLY_BRANDING_TAG MATCHES "^<path d=\\\"([^\\\"]+)\\\" fill=\\\"([^\\\"]+)\\\"/>$")
+    message(FATAL_ERROR "Could not parse 125A branding path tag.")
+  endif()
+  set(UGLY_BRANDING_D "${CMAKE_MATCH_1}")
+  set(UGLY_BRANDING_FILL "${CMAKE_MATCH_2}")
+  if(UGLY_BRANDING_FILL STREQUAL "#D71920")
+    set(UGLY_BRANDING_RED "true")
+  elseif(UGLY_BRANDING_FILL STREQUAL "#D9D9D9")
+    set(UGLY_BRANDING_RED "false")
+  else()
+    message(FATAL_ERROR "Unexpected 125A branding fill: ${UGLY_BRANDING_FILL}")
+  endif()
+  string(APPEND UGLY_BRANDING_PATHS "    {\\\"${UGLY_BRANDING_D}\\\", ${UGLY_BRANDING_RED}},\\n")
+endforeach()
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/source/branding_master.h.in" "${CMAKE_BINARY_DIR}/branding_master.h" @ONLY)
+
+
 smtg_add_vst3plugin(UglyReverb
   source/version.h
   source/ids.h
@@ -34,6 +59,7 @@ smtg_add_vst3plugin(UglyReverb
 )
 
 target_link_libraries(UglyReverb PRIVATE sdk vstgui_support)
+target_include_directories(UglyReverb PRIVATE "${CMAKE_BINARY_DIR}")
 
 smtg_target_add_plugin_resources(UglyReverb
   RESOURCES
