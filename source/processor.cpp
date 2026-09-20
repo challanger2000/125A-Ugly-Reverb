@@ -22,15 +22,9 @@ inline float clamp1(float x)
     return std::max(-1.f, std::min(1.f, x));
 }
 
-inline float softClip(float x)
+inline float lerp(float a, float b, float t)
 {
-    return x / (1.f + std::fabs(x));
-}
-
-inline float drivenSoftClip(float x, float drive)
-{
-    const float d = std::max(1.f, drive);
-    return softClip(x * d) / d;
+    return a + (b - a) * t;
 }
 }
 
@@ -118,31 +112,20 @@ tresult PLUGIN_API Processor::setBusArrangements(SpeakerArrangement* inputs, int
 
 void Processor::resetDsp()
 {
-    const int maxDelay = (int)(sampleRate_ * 0.35) + 16;
-    for (auto& l : lines_) l.resize(maxDelay);
+    const int maxComb = (int)(sampleRate_ * 0.18) + 32;
+    const int maxAp = (int)(sampleRate_ * 0.045) + 32;
+    for (auto& x : combL_) x.resize(maxComb);
+    for (auto& x : combR_) x.resize(maxComb);
+    for (auto& x : apL_) x.resize(maxAp);
+    for (auto& x : apR_) x.resize(maxAp);
+
     const int maxPre = (int)(sampleRate_ * 0.25) + 16;
     preL_.assign(maxPre, 0.f);
     preR_.assign(maxPre, 0.f);
-    const int maxMetal = (int)(sampleRate_ * 0.040) + 16;
-    for (auto& l : metalCombs_) l.resize(maxMetal);
     preWrite_ = 0;
-    phase_.fill(0.f);
-    modalZ1_.fill(0.f);
-    modalZ2_.fill(0.f);
-    modalWet_ = 0.f;
-    for (int i = 0; i < kLines; ++i)
-        rattlePhase_[i] = (2.f * kPi * i) / (float)kLines;
-    delayInitialized_ = false;
-    updateDelayLengths();
 
-    static constexpr float metalMs[3][kMetalCombs] = {
-        {2.9f, 4.1f, 5.7f, 7.9f, 10.8f, 14.6f},
-        {3.7f, 5.3f, 7.1f, 9.8f, 13.4f, 18.7f},
-        {5.1f, 7.6f, 10.9f, 15.2f, 21.3f, 29.1f}
-    };
-    const int mm = std::max(0, std::min(2, (int)std::lround(material_ * 2.f)));
-    for (int i = 0; i < kMetalCombs; ++i)
-        metalDelay_[i] = metalMs[mm][i] * 0.001f * (float)sampleRate_;
+    for (int i = 0; i < kCombs; ++i)
+        rattlePhase_[i] = (2.f * kPi * (float)i) / (float)kCombs;
 
     resetSmoothers();
 }
@@ -161,44 +144,6 @@ void Processor::resetSmoothers()
     smOutput_ = output_;
 }
 
-void Processor::updateDelayLengths()
-{
-    static constexpr float plate[kLines] = {29.7f, 37.1f, 41.1f, 43.7f, 53.1f, 59.7f, 67.9f, 73.1f};
-    static constexpr float steel[kLines] = {17.0f, 23.0f, 31.0f, 41.0f, 47.0f, 61.0f, 71.0f, 89.0f};
-    static constexpr float tank [kLines] = {43.0f, 47.0f, 59.0f, 67.0f, 79.0f, 97.0f, 109.0f, 127.0f};
-
-    const int mode = std::max(0, std::min(2, (int)std::lround(material_ * 2.f)));
-    const float* base = mode == 0 ? plate : (mode == 1 ? steel : tank);
-
-    const float sizeScale = 0.45f + size_ * 1.85f;
-    const float bodyScale = 0.72f + body_ * 0.62f;
-
-    for (int i = 0; i < kLines; ++i)
-    {
-        float ms = base[i] * sizeScale;
-        if ((i & 1) == 0) ms *= bodyScale;
-        else ms /= std::max(0.55f, bodyScale);
-        float d = ms * 0.001f * (float)sampleRate_;
-        if (!lines_[i].data.empty())
-            d = std::max(3.f, std::min(d, (float)lines_[i].data.size() - 2.f));
-        else
-            d = std::max(3.f, d);
-
-        if (!delayInitialized_)
-        {
-            delayCurrent_[i] = delayOld_[i] = delayTarget_[i] = d;
-            delayXfade_[i] = 1.f;
-        }
-        else if (std::fabs(d - delayTarget_[i]) > 0.01f)
-        {
-            delayOld_[i] = delayCurrent_[i];
-            delayTarget_[i] = d;
-            delayXfade_[i] = 0.f;
-        }
-    }
-    delayInitialized_ = true;
-}
-
 float Processor::processDigital(float x) const
 {
     const int mode = std::max(0, std::min(2, (int)std::lround(digital_ * 2.f)));
@@ -207,13 +152,21 @@ float Processor::processDigital(float x) const
     return std::round(clamp1(x) * scale) / scale;
 }
 
+float Processor::processAllpass(DelayLine& line, float input, float delaySamples, float feedback)
+{
+    const float delayed = line.read(delaySamples);
+    const float y = delayed - input;
+    line.push(input + delayed * feedback);
+    return y;
+}
+
 void Processor::applyParameter(ParamID id, float value)
 {
     const float f = std::max(0.f, std::min(1.f, value));
     switch (id)
     {
-        case kMaterial: material_ = f; updateDelayLengths(); break;
-        case kSize: size_ = f; updateDelayLengths(); break;
+        case kMaterial: material_ = f; break;
+        case kSize: size_ = f; break;
         case kDecay: decay_ = f; break;
         case kPreDelay: preDelay_ = f; break;
         case kDiffusion: diffusion_ = f; break;
@@ -221,7 +174,7 @@ void Processor::applyParameter(ParamID id, float value)
         case kMetal: metal_ = f; break;
         case kClang: clang_ = f; break;
         case kRattle: rattle_ = f; break;
-        case kBody: body_ = f; updateDelayLengths(); break;
+        case kBody: body_ = f; break;
         case kWidth: width_ = f; break;
         case kMix: mix_ = f; break;
         case kOutput: output_ = f; break;
@@ -241,17 +194,16 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             if (auto* q = data.inputParameterChanges->getParameterData(i))
             {
                 if (q->getPointCount() <= 0) continue;
-                int32 offset = 0; ParamValue v = 0.0;
+                int32 offset = 0;
+                ParamValue v = 0.0;
                 if (q->getPoint(q->getPointCount() - 1, offset, v) != kResultTrue) continue;
-                const float f = (float)v;
-                applyParameter(q->getParameterId(), f);
+                applyParameter(q->getParameterId(), (float)v);
             }
         }
     }
 
     if (data.numInputs < 1 || data.numOutputs < 1 || data.numSamples <= 0)
         return kResultOk;
-
     if (data.symbolicSampleSize != kSample32)
         return kResultFalse;
 
@@ -261,36 +213,26 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         return kResultFalse;
 
     const float smoothCoef = 1.f - std::exp(-1.f / std::max(1.f, 0.012f * (float)sampleRate_));
-    const float delayFadeStep = 1.f / std::max(1.f, 0.025f * (float)sampleRate_);
 
-    const int materialMode = std::max(0, std::min(2, (int)std::lround(material_ * 2.f)));
-    static constexpr float metalMs[3][kMetalCombs] = {
-        {2.9f, 4.1f, 5.7f, 7.9f, 10.8f, 14.6f},
-        {3.7f, 5.3f, 7.1f, 9.8f, 13.4f, 18.7f},
-        {5.1f, 7.6f, 10.9f, 15.2f, 21.3f, 29.1f}
+    // Delays intentionally avoid the evenly-spaced, highly-decorrelated design of modern reverbs.
+    // Three related sets create Plate / Steel / Tank flavours while preserving obvious modes.
+    static constexpr float baseMs[3][kCombs] = {
+        {23.1f, 27.8f, 31.7f, 36.4f, 41.9f, 47.3f, 53.6f, 61.2f},
+        {17.8f, 22.6f, 28.3f, 34.7f, 42.1f, 51.8f, 63.4f, 78.6f},
+        {31.6f, 39.3f, 48.7f, 59.8f, 73.1f, 88.4f, 104.7f, 126.3f}
     };
-    for (int i = 0; i < kMetalCombs; ++i)
-    {
-        const float materialScale = 0.78f + 0.44f * body_;
-        metalDelay_[i] = metalMs[materialMode][i] * materialScale * 0.001f * (float)sampleRate_;
-    }
-    static constexpr float modalHz[3][kModes] = {
-        {610.f,  940.f, 1480.f, 2360.f},
-        {420.f,  760.f, 1330.f, 2180.f},
-        {260.f,  510.f,  890.f, 1520.f}
+    static constexpr float uglyMs[3][kCombs] = {
+        {7.3f,  9.8f, 12.7f, 16.9f, 22.4f, 29.1f, 37.8f, 49.6f},
+        {5.9f,  8.4f, 11.6f, 15.7f, 21.3f, 28.9f, 39.4f, 54.1f},
+        {9.1f, 12.8f, 17.6f, 24.3f, 33.7f, 46.2f, 63.9f, 86.7f}
     };
-    float modalA1[kModes] {};
-    float modalA2[kModes] {};
-    float modalNorm[kModes] {};
-    for (int m = 0; m < kModes; ++m)
-    {
-        const float shift = 0.82f + 0.46f * metal_;
-        const float hz = std::min(modalHz[materialMode][m] * shift, 0.42f * (float)sampleRate_);
-        const float radius = std::min(0.9982f, 0.94f + 0.050f * clang_ + 0.007f * metal_);
-        modalA1[m] = 2.f * radius * std::cos(2.f * kPi * hz / (float)sampleRate_);
-        modalA2[m] = -(radius * radius);
-        modalNorm[m] = 1.f - radius;
-    }
+    static constexpr float apMs[3][kAllpasses] = {
+        {4.7f, 7.1f, 10.9f, 15.8f},
+        {3.8f, 6.2f,  9.6f, 14.1f},
+        {5.9f, 8.7f, 13.2f, 18.6f}
+    };
+
+    const int mat = std::max(0, std::min(2, (int)std::lround(material_ * 2.f)));
 
     for (int32 s = 0; s < data.numSamples; ++s)
     {
@@ -311,138 +253,110 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         const float outGain = std::pow(10.f, ((smOutput_ * 24.f) - 12.f) / 20.f);
         const float wet = smMix_;
         const float dry = 1.f - wet;
-        const float rt60Seconds = 0.55f * std::pow(25.f, smDecay_);
-        const float dampCoef = 0.10f + (1.f - smDamping_) * 0.86f;
-        const float diff = 0.18f + smDiffusion_ * 0.80f;
-        const float drive = 1.f + smMetal_ * 1.8f + smClang_ * 1.2f;
+
         const float preSamples = std::max(0.f, std::min((float)preL_.size() - 2.f,
                                smPreDelay_ * 0.18f * (float)sampleRate_));
-
         preL_[(size_t)preWrite_] = xL;
         preR_[(size_t)preWrite_] = xR;
+
         const int pre0 = (int)std::floor(preSamples);
         const float preFrac = preSamples - (float)pre0;
         int pr0 = preWrite_ - pre0;
         while (pr0 < 0) pr0 += (int)preL_.size();
         int pr1 = pr0 - 1;
         if (pr1 < 0) pr1 += (int)preL_.size();
+
         const float pL = preL_[(size_t)pr0] * (1.f - preFrac) + preL_[(size_t)pr1] * preFrac;
         const float pR = preR_[(size_t)pr0] * (1.f - preFrac) + preR_[(size_t)pr1] * preFrac;
         if (++preWrite_ >= (int)preL_.size()) preWrite_ = 0;
 
-        float y[kLines] {};
-        float sum = 0.f;
-        for (int i = 0; i < kLines; ++i)
-        {
-            const float rate = 0.17f + 0.043f * (float)i;
-            rattlePhase_[i] += 2.f * kPi * rate / (float)sampleRate_;
-            if (rattlePhase_[i] > 2.f * kPi) rattlePhase_[i] -= 2.f * kPi;
-            const float wobble = std::sin(rattlePhase_[i]) + 0.22f * std::sin(rattlePhase_[i] * 2.31f + (float)i);
-            const float jitter = smRattle_ * 0.0018f * (float)sampleRate_ * wobble;
-            if (delayXfade_[i] < 1.f)
-            {
-                delayXfade_[i] = std::min(1.f, delayXfade_[i] + delayFadeStep);
-                const float t = delayXfade_[i] * delayXfade_[i] * (3.f - 2.f * delayXfade_[i]);
-                const float yOld = lines_[i].read(delayOld_[i] + jitter);
-                const float yNew = lines_[i].read(delayTarget_[i] + jitter);
-                y[i] = yOld * (1.f - t) + yNew * t;
-                delayCurrent_[i] = delayOld_[i] + (delayTarget_[i] - delayOld_[i]) * t;
-            }
-            else
-            {
-                delayCurrent_[i] = delayTarget_[i];
-                y[i] = lines_[i].read(delayCurrent_[i] + jitter);
-            }
-            lines_[i].lp += dampCoef * (y[i] - lines_[i].lp);
-            y[i] = lines_[i].lp;
-            sum += y[i];
-        }
-
-        const float mean = sum * 0.125f;
-
-        // Four deliberately audible resonant modes live inside the feedback network.
-        // They are normalized for stability, but become long and obvious as CLANG rises.
-        float modal = 0.f;
-        const float modalExcite = mean * (0.18f + 0.42f * smMetal_);
-        for (int m = 0; m < kModes; ++m)
-        {
-            const float z = modalExcite * modalNorm[m]
-                          + modalA1[m] * modalZ1_[m]
-                          + modalA2[m] * modalZ2_[m];
-            modalZ2_[m] = modalZ1_[m];
-            modalZ1_[m] = std::fabs(z) < 1.0e-20f ? 0.f : z;
-            modal += z * (0.55f + 0.15f * (float)m);
-        }
-        modal *= (0.12f + 0.48f * smClang_);
-        const float modalBounded = std::tanh(modal * 0.85f);
-        modalWet_ += 0.18f * (modalBounded - modalWet_);
-
-        float fb[kLines];
-        for (int i = 0; i < kLines; ++i)
-        {
-            const float house = mean * 2.f - y[i];
-            const float cross = 0.65f * y[(i + 3) & 7] + 0.35f * y[(i + 5) & 7];
-            float scattered = house * diff + cross * (1.f - diff);
-            const float ringAmount = smClang_ * 0.085f;
-            const float ring = std::sin(phase_[i]) * ringAmount * y[i];
-            const float modeFeed = modalWet_ * (((i & 1) == 0) ? 1.f : -1.f)
-                                 * (0.018f + 0.042f * smMetal_) * smClang_;
-            phase_[i] += 2.f * kPi * (180.f + 37.f * i + 520.f * smMetal_) / (float)sampleRate_;
-            if (phase_[i] > 2.f * kPi) phase_[i] -= 2.f * kPi;
-            const float delaySeconds = delayCurrent_[i] / (float)sampleRate_;
-            const float feedback = std::min(0.995f, std::pow(10.f, -3.f * delaySeconds / rt60Seconds));
-            const float character = (scattered + ring + modeFeed) / (1.f + ringAmount);
-            fb[i] = processDigital(drivenSoftClip(character, drive)) * feedback;
-        }
-
+        // Old-style excitation: mostly mono, preserving the artificial "one box" feel.
         const float mono = 0.5f * (pL + pR);
         const float side = 0.5f * (pL - pR);
+        const float exciteL = mono + side * (0.10f + 0.22f * smWidth_);
+        const float exciteR = mono - side * (0.10f + 0.22f * smWidth_);
 
-        // Short inharmonic combs provide the unmistakable sheet-metal / tank ring.
-        // METAL controls how much of this structure is excited, CLANG controls persistence.
-        float metalL = 0.f;
-        float metalR = 0.f;
-        const float metalExcite = mono * (0.18f + 0.82f * smMetal_);
-        const float combFeedback = 0.48f + 0.46f * smClang_;
-        for (int i = 0; i < kMetalCombs; ++i)
+        float combSumL = 0.f;
+        float combSumR = 0.f;
+
+        const float sizeScale = 0.58f + size_ * 1.22f;
+        const float bodySkew = 0.82f + body_ * 0.36f;
+        const float rt60 = 0.45f * std::pow(28.f, smDecay_);
+        const float dampingCoef = 0.10f + (1.f - smDamping_) * 0.82f;
+
+        for (int i = 0; i < kCombs; ++i)
         {
-            const float wobble = 1.f + smRattle_ * 0.018f *
-                std::sin(rattlePhase_[i % kLines] * (1.3f + 0.11f * (float)i));
-            const float md = metalDelay_[i] * wobble;
-            float v = metalCombs_[i].read(md);
+            rattlePhase_[i] += (2.f * kPi * (0.13f + 0.037f * i)) / (float)sampleRate_;
+            if (rattlePhase_[i] >= 2.f * kPi) rattlePhase_[i] -= 2.f * kPi;
 
-            const float brighten = 0.35f + 0.55f * (1.f - smDamping_);
-            metalCombs_[i].lp += brighten * (v - metalCombs_[i].lp);
-            const float filtered = metalCombs_[i].lp;
+            float ms = lerp(baseMs[mat][i], uglyMs[mat][i], smMetal_);
+            ms *= sizeScale;
+            ms *= (i & 1) ? (1.f / bodySkew) : bodySkew;
 
-            const float sign = (i & 1) ? -1.f : 1.f;
-            const float push = metalExcite * (0.30f + 0.08f * (float)i)
-                             + filtered * combFeedback * sign;
-            metalCombs_[i].push(std::tanh(push * 1.15f));
+            // Rattle deliberately affects only a few paths strongly, like loose hardware.
+            const float rattleMask = (i == 1 || i == 4 || i == 6) ? 1.f : 0.25f;
+            const float jitter = smRattle_ * rattleMask * 0.0035f * (float)sampleRate_
+                               * (std::sin(rattlePhase_[i]) + 0.31f * std::sin(rattlePhase_[i] * 2.7f + i));
+            const float delayL = ms * 0.001f * (float)sampleRate_ + jitter;
+            const float delayR = delayL + (17.f + 3.f * (float)i);
 
-            const float tap = filtered * (0.24f + 0.13f * smMetal_);
-            if (i & 1) metalR += tap;
-            else metalL += tap;
+            float yL = combL_[i].read(delayL);
+            float yR = combR_[i].read(delayR);
+
+            combL_[i].lp += dampingCoef * (yL - combL_[i].lp);
+            combR_[i].lp += dampingCoef * (yR - combR_[i].lp);
+            const float fL = combL_[i].lp;
+            const float fR = combR_[i].lp;
+
+            const float delaySeconds = std::max(0.001f, ms * 0.001f);
+            float fb = std::pow(10.f, -3.f * delaySeconds / rt60);
+
+            // CLANG intentionally makes selected modes dominate instead of equalising them away.
+            static constexpr float clangShape[kCombs] = {0.15f, 0.95f, -0.10f, 0.62f, 1.00f, 0.08f, 0.78f, -0.05f};
+            fb += smClang_ * clangShape[i] * 0.055f;
+            fb = std::max(0.20f, std::min(0.989f, fb));
+
+            const float drive = 1.f + smMetal_ * 1.9f + smClang_ * 1.4f;
+            const float writeL = std::tanh((exciteL * (0.20f + 0.055f * i) + fL * fb) * drive) / drive;
+            const float writeR = std::tanh((exciteR * (0.20f + 0.055f * i) + fR * fb) * drive) / drive;
+
+            combL_[i].push(processDigital(writeL));
+            combR_[i].push(processDigital(writeR));
+
+            const float weight = 0.72f + 0.11f * (float)((i * 3) & 3);
+            combSumL += fL * weight;
+            combSumR += fR * weight;
         }
 
-        const float metalMono = 0.5f * (metalL + metalR);
-        for (int i = 0; i < kLines; ++i)
+        combSumL *= 0.17f;
+        combSumR *= 0.17f;
+
+        // Short serial allpasses make the parallel echoes fuse into reverb,
+        // but intentionally stop before the tail becomes modern/smooth.
+        float apOutL = combSumL;
+        float apOutR = combSumR;
+        const float apFeedback = 0.34f + smDiffusion_ * 0.34f + smMetal_ * 0.10f;
+        for (int i = 0; i < kAllpasses; ++i)
         {
-            const float inject = mono * (0.34f + 0.16f * smMetal_)
-                               + metalMono * (0.10f + 0.22f * smMetal_)
-                               + ((i & 1) ? side : -side) * (0.16f + 0.10f * smWidth_);
-            lines_[i].push(inject + fb[i]);
+            const float uglyScale = 1.f - smMetal_ * (0.10f + 0.035f * i);
+            const float dL = apMs[mat][i] * uglyScale * 0.001f * (float)sampleRate_;
+            const float dR = dL + 11.f + 4.f * (float)i;
+            apOutL = processAllpass(apL_[i], apOutL, dL, std::min(0.82f, apFeedback));
+            apOutR = processAllpass(apR_[i], apOutR, dR, std::min(0.82f, apFeedback));
         }
 
-        const float wetGain = 0.72f + 0.78f * smMetal_ + 0.58f * smClang_;
-        float wetL = ((y[0] + y[2] - y[5] + y[7]) * 0.42f
-                    + modalWet_ * 0.34f
-                    + metalL * (0.22f + 0.58f * smMetal_)) * wetGain;
-        float wetR = ((y[1] + y[3] - y[4] + y[6]) * 0.42f
-                    - modalWet_ * 0.34f
-                    + metalR * (0.22f + 0.58f * smMetal_)) * wetGain;
+        // At high METAL/CLANG the raw comb bank is deliberately leaked back in.
+        // This is the "too metallic for a good reverb" control range.
+        const float rawLeak = smMetal_ * (0.16f + 0.34f * smClang_);
+        float wetL = apOutL * (1.f - rawLeak) + combSumL * rawLeak;
+        float wetR = apOutR * (1.f - rawLeak) + combSumR * rawLeak;
+
+        const float characterGain = 1.10f + 0.95f * smMetal_ + 0.55f * smClang_;
+        wetL *= characterGain;
+        wetR *= characterGain;
+
         const float wmid = 0.5f * (wetL + wetR);
-        const float wside = 0.5f * (wetL - wetR) * (0.15f + smWidth_ * 1.85f);
+        const float wside = 0.5f * (wetL - wetR) * (0.18f + smWidth_ * 1.82f);
         wetL = wmid + wside;
         wetR = wmid - wside;
 
@@ -468,6 +382,7 @@ tresult PLUGIN_API Processor::setState(IBStream* state)
                       rattle_, body_, width_, mix_, output_, digital_};
     for (float& v : values) if (!s.readFloat(v)) return kResultFalse;
     int32 bp = 0; if (!s.readInt32(bp)) return kResultFalse;
+
     const ParamID ids[14] = {kMaterial,kSize,kDecay,kPreDelay,kDiffusion,kDamping,kMetal,kClang,
                              kRattle,kBody,kWidth,kMix,kOutput,kDigital};
     for (int i = 0; i < 14; ++i) applyParameter(ids[i], values[i]);
