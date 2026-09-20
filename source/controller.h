@@ -16,6 +16,8 @@ public:
     Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream* state) override;
     Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* state) override;
     Steinberg::IPlugView* PLUGIN_API createView(const char* name) override;
+    void didOpen(VSTGUI::VST3Editor* editor) override;
+    void willClose(VSTGUI::VST3Editor* editor) override;
     VSTGUI::CView* createCustomView(VSTGUI::UTF8StringPtr name,
         const VSTGUI::UIAttributes& attributes,
         const VSTGUI::IUIDescription* description,
@@ -23,6 +25,7 @@ public:
 
 private:
     int guiZoomIndex_ {0};
+    VSTGUI::VST3Editor* openEditor_ {nullptr};
 };
 
 } // namespace UglyReverb
