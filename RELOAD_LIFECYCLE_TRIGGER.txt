@@ -1,0 +1,1 @@
+Verify reload/instantiation lifecycle after switching to EditController.
