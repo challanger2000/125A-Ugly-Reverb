@@ -96,6 +96,8 @@ VSTGUI::CView* Controller::createCustomView(VSTGUI::UTF8StringPtr name,
     if(std::strcmp(name,"Faceplate")==0) return new UglyFaceplate(r);
     if(std::strcmp(name,"BrandLogo")==0) return new UglyLogo(r);
     auto* knobBody=d->getBitmap("KnobMaster");
+    auto* toggleOff=d->getBitmap("ToggleOff");
+    auto* toggleOn=d->getBitmap("ToggleOn");
     auto knob=[&](const char* n,ParamID id)->VSTGUI::CView*{
         return std::strcmp(name,n)==0?new UglyKnob(r,e,id,knobBody):nullptr;
     };
@@ -108,7 +110,7 @@ VSTGUI::CView* Controller::createCustomView(VSTGUI::UTF8StringPtr name,
     if(std::strcmp(name,"Digital")==0)
         return new UglySelector(r,e,kDigital,std::vector<std::string>{"CLEAN","12-BIT","8-BIT"});
     if(auto*v=knob("Mix",kMix))return v; if(auto*v=knob("Output",kOutput))return v;
-    if(std::strcmp(name,"Bypass")==0) return new UglyToggle(r,e,kBypass);
+    if(std::strcmp(name,"Bypass")==0) return new UglyToggle(r,e,kBypass,toggleOff,toggleOn);
     return nullptr;
 }
 
