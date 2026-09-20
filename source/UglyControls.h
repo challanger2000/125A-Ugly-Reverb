@@ -48,6 +48,7 @@ public:
     void draw(VSTGUI::CDrawContext* c) override;
 private:
     VSTGUI::CMultiFrameBitmap* strip_ {nullptr};
+    int knobPixels_ {0};
 };
 
 class UglySelector final : public VSTGUI::CControl {
