@@ -75,6 +75,15 @@ add_executable(UglyReverbMeasurements
   ${vst3sdk_SOURCE_DIR}/public.sdk/source/common/memorystream.cpp
   ${vst3sdk_SOURCE_DIR}/public.sdk/source/vst/hosting/parameterchanges.cpp
 )
+
+if(WIN32)
+  add_executable(UglyReverbReloadProbe
+    tests/reload_lifecycle.cpp
+    ${vst3sdk_SOURCE_DIR}/public.sdk/source/vst/hosting/module_win32.cpp
+  )
+  target_link_libraries(UglyReverbReloadProbe PRIVATE sdk_hosting sdk_common base pluginterfaces)
+  target_compile_definitions(UglyReverbReloadProbe PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+endif()
 target_compile_definitions(UglyReverbMeasurements PRIVATE UGLY_REVERB_TESTING=1)
 target_include_directories(UglyReverbMeasurements PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 target_link_libraries(UglyReverbMeasurements PRIVATE sdk vstgui_support)
