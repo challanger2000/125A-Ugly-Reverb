@@ -6,7 +6,14 @@ import struct
 import sys
 import zlib
 
-W, H = 760, 430
+BASE_W, BASE_H = 760, 430
+SCALE = 1
+W, H = BASE_W, BASE_H
+
+def set_scale(scale):
+    global SCALE, W, H
+    SCALE = scale
+    W, H = BASE_W * SCALE, BASE_H * SCALE
 
 def blank():
     return bytearray(W * H * 4)
@@ -33,23 +40,25 @@ def line(buf, x0,y0,x1,y1,rgba,width=1,broken=False,rng=None):
     dx=x1-x0; dy=y1-y0
     steps=max(1,int(max(abs(dx),abs(dy))))
     rng=rng or random
+    phys_width=max(1,round(width*SCALE))
     for s in range(steps+1):
         if broken and rng.random()<0.18:
             continue
         t=s/steps
-        x=round(x0+dx*t); y=round(y0+dy*t)
-        for yy in range(y-width//2,y+width//2+1):
-            for xx in range(x-width//2,x+width//2+1):
+        x=round((x0+dx*t)*SCALE); y=round((y0+dy*t)*SCALE)
+        for yy in range(y-phys_width//2,y+phys_width//2+1):
+            for xx in range(x-phys_width//2,x+phys_width//2+1):
                 blend(buf,xx,yy,rgba)
 
 def blob(buf,cx,cy,rx,ry,rgba,seed):
     rng=random.Random(seed)
     jitter=[rng.uniform(0.72,1.18) for _ in range(32)]
-    x0=max(0,int(cx-rx-2)); x1=min(W,int(cx+rx+3))
-    y0=max(0,int(cy-ry-2)); y1=min(H,int(cy+ry+3))
+    pcx,pcy,prx,pry=cx*SCALE,cy*SCALE,rx*SCALE,ry*SCALE
+    x0=max(0,int(pcx-prx-2*SCALE)); x1=min(W,int(pcx+prx+3*SCALE))
+    y0=max(0,int(pcy-pry-2*SCALE)); y1=min(H,int(pcy+pry+3*SCALE))
     for y in range(y0,y1):
         for x in range(x0,x1):
-            dx=(x-cx)/max(1.0,rx); dy=(y-cy)/max(1.0,ry)
+            dx=(x-pcx)/max(1.0,prx); dy=(y-pcy)/max(1.0,pry)
             d=math.sqrt(dx*dx+dy*dy)
             ang=(math.atan2(dy,dx)+math.pi)/(2*math.pi)
             j=jitter[int(ang*31.999)]
@@ -60,11 +69,12 @@ def blob(buf,cx,cy,rx,ry,rgba,seed):
                 blend(buf,x,y,(rgba[0],rgba[1],rgba[2],a))
 
 def soft_ellipse(buf,cx,cy,rx,ry,rgba):
-    x0=max(0,int(cx-rx*2)); x1=min(W,int(cx+rx*2)+1)
-    y0=max(0,int(cy-ry*2)); y1=min(H,int(cy+ry*2)+1)
+    pcx,pcy,prx,pry=cx*SCALE,cy*SCALE,rx*SCALE,ry*SCALE
+    x0=max(0,int(pcx-prx*2)); x1=min(W,int(pcx+prx*2)+1)
+    y0=max(0,int(pcy-pry*2)); y1=min(H,int(pcy+pry*2)+1)
     for y in range(y0,y1):
         for x in range(x0,x1):
-            dx=(x-cx)/max(1.0,rx); dy=(y-cy)/max(1.0,ry)
+            dx=(x-pcx)/max(1.0,prx); dy=(y-pcy)/max(1.0,pry)
             d2=dx*dx+dy*dy
             if d2>4.0: continue
             a=round(rgba[3]*math.exp(-1.55*d2))
@@ -100,11 +110,13 @@ def mask_wear_to_panel_interiors(buf, panels, inset=6, radius=7):
         return dx*dx+dy*dy <= rad*rad
 
     for y in range(H):
+        ly=y/SCALE
         for x in range(W):
+            lx=x/SCALE
             keep=False
             for l,t,r,b in panels:
                 il, it, ir, ib = l+inset, t+inset, r-inset, b-inset
-                if inside_round_rect(x,y,il,it,ir,ib,radius):
+                if inside_round_rect(lx,ly,il,it,ir,ib,radius):
                     keep=True
                     break
             if not keep:
@@ -185,35 +197,37 @@ def generate_glass():
     # broad soft reflection bands; calculated per pixel so there are no hard vector edges
     bands=[(88,0.34,22,10),(545,0.17,15,6)]
     for y in range(H):
+        ly=y/SCALE
         for x in range(W):
+            lx=x/SCALE
             a=0.0
             for center,slope,sigma,maxa in bands:
-                d=x-(center+slope*y)
+                d=lx-(center+slope*ly)
                 a+=maxa*math.exp(-(d*d)/(2*sigma*sigma))
             if a>0.35:
                 blend(buf,x,y,(238,245,249,min(18,round(a))))
     rng=random.Random(12502)
     # broad matte wipe traces / fingerprint-like haze
     for n in range(17):
-        soft_ellipse(buf,rng.uniform(25,W-25),rng.uniform(22,H-22),
+        soft_ellipse(buf,rng.uniform(25,BASE_W-25),rng.uniform(22,BASE_H-22),
                      rng.uniform(22,72),rng.uniform(7,25),
                      (226,235,240,rng.randint(2,6)))
     for n in range(5):
-        soft_ellipse(buf,rng.uniform(40,W-40),rng.uniform(25,H-25),
+        soft_ellipse(buf,rng.uniform(40,BASE_W-40),rng.uniform(25,BASE_H-25),
                      rng.uniform(18,45),rng.uniform(8,20),
                      (7,12,16,rng.randint(2,4)))
     # very fine cover scratches, sparse and broken
     for n in range(13):
-        x=rng.uniform(25,W-95); y=rng.uniform(18,H-18)
+        x=rng.uniform(25,BASE_W-95); y=rng.uniform(18,BASE_H-18)
         ln=rng.uniform(20,70); slope=rng.uniform(-0.16,0.16)
         line(buf,x,y,x+ln,y+slope*ln,(242,247,250,rng.randint(8,18)),1,True,rng)
     # subtle dusty edge haze
     for n in range(70):
         side=rng.randrange(4)
         if side<2:
-            x=rng.uniform(0,W); y=rng.uniform(0,9) if side==0 else rng.uniform(H-9,H)
+            x=rng.uniform(0,BASE_W); y=rng.uniform(0,9) if side==0 else rng.uniform(BASE_H-9,BASE_H)
         else:
-            x=rng.uniform(0,9) if side==2 else rng.uniform(W-9,W); y=rng.uniform(0,H)
+            x=rng.uniform(0,9) if side==2 else rng.uniform(BASE_W-9,BASE_W); y=rng.uniform(0,BASE_H)
         blob(buf,x,y,rng.uniform(0.7,2.3),rng.uniform(0.7,2.3),
              (220,228,232,rng.randint(3,10)),15000+n)
     return buf
@@ -221,9 +235,16 @@ def generate_glass():
 def main():
     out=sys.argv[1] if len(sys.argv)>1 else "."
     os.makedirs(out,exist_ok=True)
+
+    set_scale(1)
     write_png(os.path.join(out,"ugly_wear_overlay.png"),generate_wear())
     write_png(os.path.join(out,"ugly_glass_overlay.png"),generate_glass())
-    print("Generated 760x430 RGBA GUI overlays")
+
+    set_scale(2)
+    write_png(os.path.join(out,"ugly_wear_overlay#2.0x.png"),generate_wear())
+    write_png(os.path.join(out,"ugly_glass_overlay#2.0x.png"),generate_glass())
+
+    print("Generated 1x and 2x RGBA GUI overlays")
 
 if __name__=="__main__":
     main()
