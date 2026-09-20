@@ -27,6 +27,8 @@ smtg_add_vst3plugin(UglyReverb
   source/processor.cpp
   source/controller.h
   source/controller.cpp
+  source/UglyControls.h
+  source/UglyControls.cpp
   source/entry.cpp
   resource/ugly_reverb.uidesc
 )
