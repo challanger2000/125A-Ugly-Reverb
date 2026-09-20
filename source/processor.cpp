@@ -113,9 +113,10 @@ tresult PLUGIN_API Processor::setProcessing(TBool state)
 uint32 PLUGIN_API Processor::getTailSamples()
 {
     // CLANG can raise selected comb feedback paths close to the 0.991 safety
-    // ceiling. Across all materials/Size/Body combinations the resulting worst
-    // analytical -60 dB decay is about 118 seconds, so report 120 seconds.
-    constexpr double kReportedTailSeconds = 120.0;
+    // ceiling. Across the continuous Material/Metal/Size/Body range the worst
+    // analytical -60 dB decay is about 125 seconds. Report 150 seconds to leave
+    // margin for the small delay modulation and serial diffusion stages.
+    constexpr double kReportedTailSeconds = 150.0;
     const double samples = std::ceil(sampleRate_ * kReportedTailSeconds);
     return static_cast<uint32>(std::min<double>(
         samples, static_cast<double>(std::numeric_limits<uint32>::max())));
