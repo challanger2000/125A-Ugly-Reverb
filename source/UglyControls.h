@@ -50,10 +50,14 @@ private:
 
 class UglyToggle final : public VSTGUI::COnOffButton {
 public:
-    UglyToggle(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag);
+    UglyToggle(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag,
+               VSTGUI::CBitmap* offBitmap,VSTGUI::CBitmap* onBitmap);
     UglyToggle(const UglyToggle& o);
     VSTGUI::CBaseObject* newCopy() const override { return new UglyToggle(*this); }
     void draw(VSTGUI::CDrawContext* c) override;
+private:
+    VSTGUI::CBitmap* off_ {nullptr};
+    VSTGUI::CBitmap* on_ {nullptr};
 };
 
 } // namespace UglyReverb
