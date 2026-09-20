@@ -57,7 +57,7 @@ public:
 
 class UglyZoomControl final : public VSTGUI::CControl {
 public:
-    UglyZoomControl(const VSTGUI::CRect& r,VSTGUI::VST3Editor* editor);
+    UglyZoomControl(const VSTGUI::CRect& r,VSTGUI::VST3Editor* editor,int* zoomIndex);
     UglyZoomControl(const UglyZoomControl& o);
     VSTGUI::CBaseObject* newCopy() const override { return new UglyZoomControl(*this); }
     void draw(VSTGUI::CDrawContext* c) override;
@@ -65,6 +65,7 @@ public:
                                            const VSTGUI::CButtonState& buttons) override;
 private:
     VSTGUI::VST3Editor* editor_ {nullptr};
+    int* zoomIndex_ {nullptr};
 };
 
 } // namespace UglyReverb
