@@ -1,5 +1,6 @@
 #include "controller.h"
 #include "parameters.h"
+#include "state_format.h"
 #include "base/source/fstreamer.h"
 #include "public.sdk/source/vst/vstparameters.h"
 #include "vstgui/plugin-bindings/vst3editor.h"
@@ -77,13 +78,18 @@ tresult PLUGIN_API Controller::setComponentState(IBStream* state)
 {
     if (!state) return kResultFalse;
     IBStreamer s(state, kLittleEndian);
-    float v[14] {};
-    for (float& x : v) if (!s.readFloat(x)) return kResultFalse;
-    int32 bp = 0; if (!s.readInt32(bp)) return kResultFalse;
 
-    const ParamID ids[14] = {kMaterial,kSize,kDecay,kPreDelay,kDiffusion,kDamping,kMetal,kClang,
-                             kRattle,kBody,kWidth,kMix,kOutput,kDigital};
-    for (int i=0;i<14;++i) setParamNormalized(ids[i], v[i]);
+    float values[kComponentStateValueCount] {};
+    int32 bp = 0;
+    if (!readComponentStatePayload(s, values, bp))
+        return kResultFalse;
+
+    const ParamID ids[kComponentStateValueCount] = {
+        kMaterial,kSize,kDecay,kPreDelay,kDiffusion,kDamping,kMetal,kClang,
+        kRattle,kBody,kWidth,kMix,kOutput,kDigital
+    };
+    for (int i = 0; i < kComponentStateValueCount; ++i)
+        setParamNormalized(ids[i], values[i]);
     setParamNormalized(kBypass, bp ? 1.0 : 0.0);
     return kResultOk;
 }
@@ -96,10 +102,12 @@ tresult PLUGIN_API Controller::setState(IBStream* state)
     int32 magic = 0;
     if (!s.readInt32(magic)) {
         guiZoomIndex_ = 0;
+        if (openEditor_) openEditor_->setZoomFactor(kGuiZoomFactors[0]);
         return kResultOk; // pre-zoom projects had no controller-private state
     }
     if (magic != kGuiStateMagic) {
         guiZoomIndex_ = 0;
+        if (openEditor_) openEditor_->setZoomFactor(kGuiZoomFactors[0]);
         return kResultOk;
     }
 
@@ -111,6 +119,8 @@ tresult PLUGIN_API Controller::setState(IBStream* state)
         return kResultOk;
 
     guiZoomIndex_ = std::clamp(static_cast<int>(zoomIndex), 0, 4);
+    if (openEditor_)
+        openEditor_->setZoomFactor(kGuiZoomFactors[guiZoomIndex_]);
     return kResultOk;
 }
 
@@ -136,6 +146,19 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(const char* name)
         return editor;
     }
     return nullptr;
+}
+
+void Controller::didOpen(VSTGUI::VST3Editor* editor)
+{
+    openEditor_ = editor;
+    if (openEditor_)
+        openEditor_->setZoomFactor(kGuiZoomFactors[std::clamp(guiZoomIndex_, 0, 4)]);
+}
+
+void Controller::willClose(VSTGUI::VST3Editor* editor)
+{
+    if (openEditor_ == editor)
+        openEditor_ = nullptr;
 }
 
 VSTGUI::CView* Controller::createCustomView(VSTGUI::UTF8StringPtr name,
