@@ -6,7 +6,7 @@
 
 namespace UglyReverb {
 
-class Controller final : public Steinberg::Vst::EditControllerEx1,
+class Controller final : public Steinberg::Vst::EditController,
                          public VSTGUI::VST3EditorDelegate
 {
 public:
