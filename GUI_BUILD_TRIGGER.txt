@@ -1,1 +1,0 @@
-Verify embedded 887x887 bypass PNG masters.
