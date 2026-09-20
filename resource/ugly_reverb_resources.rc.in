@@ -1,0 +1,5 @@
+#include <windows.h>
+
+ugly_reverb_knob_master.png      PNG DISCARDABLE "@CMAKE_CURRENT_SOURCE_DIR@/resource/ugly_reverb_knob_master.png"
+ugly_reverb_toggle_off.png       PNG DISCARDABLE "@CMAKE_CURRENT_SOURCE_DIR@/resource/ugly_reverb_toggle_off.png"
+ugly_reverb_toggle_on.png        PNG DISCARDABLE "@CMAKE_CURRENT_SOURCE_DIR@/resource/ugly_reverb_toggle_on.png"
