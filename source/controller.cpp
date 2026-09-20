@@ -145,6 +145,7 @@ VSTGUI::CView* Controller::createCustomView(VSTGUI::UTF8StringPtr name,
     VSTGUI::CPoint o{0,0},s{60,60}; a.getPointAttribute("origin",o); a.getPointAttribute("size",s);
     VSTGUI::CRect r(o.x,o.y,o.x+s.x,o.y+s.y);
     if(std::strcmp(name,"Faceplate")==0) return new UglyFaceplate(r);
+    if(std::strcmp(name,"GlassOverlay")==0) return new UglyGlassOverlay(r);
     if(std::strcmp(name,"BrandLogo")==0) return new UglyLogo(r);
     if(std::strcmp(name,"GuiZoom")==0) return new UglyZoomControl(r,e,&guiZoomIndex_);
     auto knob=[&](const char* n,ParamID id)->VSTGUI::CView*{
