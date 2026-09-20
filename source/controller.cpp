@@ -2,6 +2,8 @@
 #include "parameters.h"
 #include "base/source/fstreamer.h"
 #include "public.sdk/source/vst/vstparameters.h"
+#include "vstgui/plugin-bindings/vst3editor.h"
+#include "base/source/fstring.h"
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -67,6 +69,14 @@ tresult PLUGIN_API Controller::setComponentState(IBStream* state)
     for (int i=0;i<14;++i) setParamNormalized(ids[i], v[i]);
     setParamNormalized(kBypass, bp ? 1.0 : 0.0);
     return kResultOk;
+}
+
+Steinberg::IPlugView* PLUGIN_API Controller::createView(const char* name)
+{
+    Steinberg::ConstString viewName(name);
+    if (viewName == Steinberg::Vst::ViewType::kEditor)
+        return new VSTGUI::VST3Editor(this, "view", "ugly_reverb.uidesc");
+    return nullptr;
 }
 
 } // namespace UglyReverb
