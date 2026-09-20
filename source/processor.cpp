@@ -383,6 +383,13 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         wetL *= characterGain;
         wetR *= characterGain;
 
+        // Calibrate the deliberately hot character core to a usable insert-mix range.
+        // With the squared Mix law, 20% knob = 4% internal wet.  A 0.05 core trim
+        // moves the previously obvious ~0.2% wet region to roughly that 20% area.
+        constexpr float kWetCalibration = 0.05f; // ~ -26.0 dB
+        wetL *= kWetCalibration;
+        wetR *= kWetCalibration;
+
         const float wmid = 0.5f * (wetL + wetR);
         const float wside = 0.5f * (wetL - wetR) * (0.18f + smWidth_ * 1.82f);
         wetL = wmid + wside;
