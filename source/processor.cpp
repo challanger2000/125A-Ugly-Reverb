@@ -232,6 +232,23 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         {5.9f, 8.7f, 13.2f, 18.6f}
     };
 
+    // Each material deliberately has a different failure mode:
+    // Plate = dense metallic sheet, Steel = hard modal clang, Tank = coarse hollow ring.
+    static constexpr float clangShape[3][kCombs] = {
+        {0.42f, 0.74f, 0.18f, 0.66f, 0.82f, 0.28f, 0.71f, 0.12f},
+        {0.08f, 1.00f,-0.16f, 0.72f, 1.00f, 0.03f, 0.91f,-0.12f},
+        {0.22f, 0.81f,-0.08f, 1.00f, 0.58f, 0.18f, 0.97f, 0.05f}
+    };
+    static constexpr float combWeight[3][kCombs] = {
+        {0.92f,0.88f,0.96f,0.90f,0.94f,0.89f,0.93f,0.91f},
+        {0.62f,1.16f,0.58f,0.96f,1.22f,0.66f,1.08f,0.61f},
+        {0.78f,1.02f,0.70f,1.12f,0.76f,0.94f,1.18f,0.72f}
+    };
+    static constexpr float rt60Scale[3] = {0.92f, 1.00f, 1.18f};
+    static constexpr float diffusionBias[3] = {0.10f, -0.05f, -0.10f};
+    static constexpr float rawLeakScale[3] = {0.72f, 1.18f, 1.06f};
+    static constexpr float materialGain[3] = {1.00f, 1.14f, 1.08f};
+
     const int mat = std::max(0, std::min(2, (int)std::lround(material_ * 2.f)));
 
     for (int32 s = 0; s < data.numSamples; ++s)
@@ -281,7 +298,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
         const float sizeScale = 0.58f + size_ * 1.22f;
         const float bodySkew = 0.82f + body_ * 0.36f;
-        const float rt60 = 0.45f * std::pow(28.f, smDecay_);
+        const float rt60 = 0.45f * std::pow(28.f, smDecay_) * rt60Scale[mat];
         const float dampingCoef = 0.10f + (1.f - smDamping_) * 0.82f;
 
         for (int i = 0; i < kCombs; ++i)
@@ -312,9 +329,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             float fb = std::pow(10.f, -3.f * delaySeconds / rt60);
 
             // CLANG intentionally makes selected modes dominate instead of equalising them away.
-            static constexpr float clangShape[kCombs] = {0.15f, 0.95f, -0.10f, 0.62f, 1.00f, 0.08f, 0.78f, -0.05f};
-            fb += smClang_ * clangShape[i] * 0.055f;
-            fb = std::max(0.20f, std::min(0.989f, fb));
+            const float clangDepth = mat == 0 ? 0.050f : (mat == 1 ? 0.074f : 0.066f);
+            fb += smClang_ * clangShape[mat][i] * clangDepth;
+            fb = std::max(0.20f, std::min(0.991f, fb));
 
             const float drive = 1.f + smMetal_ * 1.9f + smClang_ * 1.4f;
             const float writeL = std::tanh((exciteL * (0.20f + 0.055f * i) + fL * fb) * drive) / drive;
@@ -323,7 +340,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             combL_[i].push(processDigital(writeL));
             combR_[i].push(processDigital(writeR));
 
-            const float weight = 0.72f + 0.11f * (float)((i * 3) & 3);
+            const float weight = combWeight[mat][i];
             combSumL += fL * weight;
             combSumR += fR * weight;
         }
@@ -335,7 +352,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         // but intentionally stop before the tail becomes modern/smooth.
         float apOutL = combSumL;
         float apOutR = combSumR;
-        const float apFeedback = 0.34f + smDiffusion_ * 0.34f + smMetal_ * 0.10f;
+        const float apFeedback = 0.34f + smDiffusion_ * 0.34f + smMetal_ * 0.10f + diffusionBias[mat];
         for (int i = 0; i < kAllpasses; ++i)
         {
             const float uglyScale = 1.f - smMetal_ * (0.10f + 0.035f * i);
@@ -347,11 +364,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
         // At high METAL/CLANG the raw comb bank is deliberately leaked back in.
         // This is the "too metallic for a good reverb" control range.
-        const float rawLeak = smMetal_ * (0.16f + 0.34f * smClang_);
+        const float rawLeak = std::min(0.82f,
+            smMetal_ * (0.18f + 0.50f * smClang_) * rawLeakScale[mat]);
         float wetL = apOutL * (1.f - rawLeak) + combSumL * rawLeak;
         float wetR = apOutR * (1.f - rawLeak) + combSumR * rawLeak;
 
-        const float characterGain = 1.10f + 0.95f * smMetal_ + 0.55f * smClang_;
+        const float characterGain = (1.12f + 1.25f * smMetal_ + 0.90f * smClang_) * materialGain[mat];
         wetL *= characterGain;
         wetR *= characterGain;
 
