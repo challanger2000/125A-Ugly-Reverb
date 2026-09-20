@@ -222,7 +222,31 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         }
     }
 
-    if (data.numInputs < 1 || data.numOutputs < 1 || data.numSamples <= 0)
+    // Parameter-only process calls are valid VST3 host behaviour.  Even with
+    // zero audio samples, consume queued values so processor/controller state
+    // remains synchronized.
+    if (data.numSamples <= 0)
+    {
+        for (int32 qIndex = 0; qIndex < activeQueues; ++qIndex)
+        {
+            while (pointIndex[qIndex] < pointCount[qIndex])
+            {
+                applyParameter(paramQueues[qIndex]->getParameterId(),
+                               (float)nextValue[qIndex]);
+                ++pointIndex[qIndex];
+                if (pointIndex[qIndex] < pointCount[qIndex] &&
+                    paramQueues[qIndex]->getPoint(pointIndex[qIndex],
+                                                  nextOffset[qIndex],
+                                                  nextValue[qIndex]) != kResultTrue)
+                {
+                    pointIndex[qIndex] = pointCount[qIndex];
+                }
+            }
+        }
+        return kResultOk;
+    }
+
+    if (data.numInputs < 1 || data.numOutputs < 1)
         return kResultOk;
     if (data.symbolicSampleSize != kSample32)
         return kResultFalse;
@@ -515,6 +539,26 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         {
             out[0][s] = (xL * dry + wetL * wet) * outGain;
             out[1][s] = (xR * dry + wetR * wet) * outGain;
+        }
+    }
+
+    // A host may place a parameter point exactly at the block boundary.
+    // It affects no sample in this block, but must become the target state for
+    // the following block (and for processor/controller synchronization).
+    for (int32 qIndex = 0; qIndex < activeQueues; ++qIndex)
+    {
+        while (pointIndex[qIndex] < pointCount[qIndex])
+        {
+            applyParameter(paramQueues[qIndex]->getParameterId(),
+                           (float)nextValue[qIndex]);
+            ++pointIndex[qIndex];
+            if (pointIndex[qIndex] < pointCount[qIndex] &&
+                paramQueues[qIndex]->getPoint(pointIndex[qIndex],
+                                              nextOffset[qIndex],
+                                              nextValue[qIndex]) != kResultTrue)
+            {
+                pointIndex[qIndex] = pointCount[qIndex];
+            }
         }
     }
 
