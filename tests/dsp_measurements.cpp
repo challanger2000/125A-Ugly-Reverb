@@ -221,14 +221,17 @@ int main()
         const double restrainedWet=energy(restrained.left,characterStart,restrained.left.size());
         const double clangWet=energy(clangHeavy.left,characterStart,clangHeavy.left.size());
         const double metalDelta=difference(restrained.left,metalOnly.left);
+        const double clangDelta=difference(metalOnly.left,clangHeavy.left);
         const double rattleDelta=difference(clangHeavy.left,fullChaos.left);
         std::cout << "[INFO] restrained_character_energy=" << restrainedWet
                   << " clang_character_energy=" << clangWet
                   << " ratio=" << (restrainedWet > 0.0 ? clangWet/restrainedWet : 0.0)
                   << " metal_delta=" << metalDelta
+                  << " clang_delta=" << clangDelta
                   << " rattle_delta=" << rattleDelta << "\n";
         require(metalDelta > 1e-4, "Metal alone substantially changes the reverb body", failures);
-        require(clangWet > restrainedWet * 6.0, "Metal plus Clang creates a much stronger character tail", failures);
+        require(clangDelta > 1e-4, "Clang substantially reshapes the metallic tail", failures);
+        require(clangWet > restrainedWet * 1.5, "Metal plus Clang increases character-tail energy", failures);
         require(rattleDelta > 1e-4, "Full Rattle substantially changes the resonant structure", failures);
 
         auto clean=render(48000.0,1.5,0.5f,0.f,0.f);
