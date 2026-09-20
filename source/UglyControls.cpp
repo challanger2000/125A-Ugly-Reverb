@@ -3,6 +3,7 @@
 #include "vstgui/lib/cdrawcontext.h"
 #include "vstgui/lib/cgradient.h"
 #include "vstgui/lib/cgraphicspath.h"
+#include "vstgui/plugin-bindings/vst3editor.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -210,60 +211,97 @@ void UglyKnob::draw(VSTGUI::CDrawContext* c)
 
     c->setDrawMode(VSTGUI::kAntiAliasing|VSTGUI::kNonIntegralMode);
 
-    // Outer value ring: restrained blue, with a darker unused arc.
     const double arcR=size*0.455;
     const VSTGUI::CRect arcBox(p.x-arcR,p.y-arcR,p.x+arcR,p.y+arcR);
     c->setLineWidth(2.0);
-    c->setFrameColor({18,28,39,255});
+    c->setFrameColor({15,25,36,255});
     c->drawArc(arcBox,135.f,405.f,VSTGUI::kDrawStroked);
     if(v>0.001) {
-        c->setFrameColor({72,158,224,235});
+        c->setFrameColor({70,159,226,235});
         c->drawArc(arcBox,135.f,static_cast<float>(135.0+270.0*v),VSTGUI::kDrawStroked);
     }
 
-    // Soft contact shadow.
-    const double shadowR=size*0.34;
-    c->setFillColor({0,0,0,105});
+    // Deep mounting shadow.
+    const double shadowR=size*0.355;
+    c->setFillColor({0,0,0,125});
     c->drawEllipse({p.x-shadowR+2.0,p.y-shadowR+4.0,
-                    p.x+shadowR+4.0,p.y+shadowR+7.0},VSTGUI::kDrawFilled);
+                    p.x+shadowR+4.0,p.y+shadowR+8.0},VSTGUI::kDrawFilled);
 
-    // Black bezel.
-    const double bezelR=size*0.365;
-    c->setFillColor({3,5,7,255});
+    // Black recessed bezel.
+    const double bezelR=size*0.375;
+    c->setFillColor({2,4,6,255});
     c->drawEllipse({p.x-bezelR,p.y-bezelR,p.x+bezelR,p.y+bezelR},VSTGUI::kDrawFilled);
-    c->setFrameColor({56,63,71,255});
+    c->setFrameColor({65,74,84,255});
     c->setLineWidth(1.0);
     c->drawEllipse({p.x-bezelR,p.y-bezelR,p.x+bezelR,p.y+bezelR},VSTGUI::kDrawStroked);
 
-    // Slim silver knob body.
-    const double bodyR=size*0.285;
-    VSTGUI::CRect body(p.x-bodyR,p.y-bodyR,p.x+bodyR,p.y+bodyR);
-    auto* bodyPath=c->createRoundRectGraphicsPath(body,bodyR);
-    if(bodyPath) {
-        auto* silver=VSTGUI::CGradient::create(0.0,1.0,
-            VSTGUI::CColor{232,236,240,255},VSTGUI::CColor{105,114,124,255});
-        if(silver) {
-            c->fillLinearGradient(bodyPath,*silver,body.getTopLeft(),body.getBottomLeft(),false);
-            silver->forget();
+    // Steel collar with radial knurling.
+    const double collarR=size*0.325;
+    VSTGUI::CRect collar(p.x-collarR,p.y-collarR,p.x+collarR,p.y+collarR);
+    auto* collarPath=c->createRoundRectGraphicsPath(collar,collarR);
+    if(collarPath) {
+        auto* steel=VSTGUI::CGradient::create(0.0,1.0,
+            VSTGUI::CColor{205,212,219,255},VSTGUI::CColor{74,82,91,255});
+        if(steel) {
+            c->fillLinearGradient(collarPath,*steel,collar.getTopLeft(),collar.getBottomLeft(),false);
+            steel->forget();
         }
-        c->setFrameColor({32,37,43,255});
-        c->setLineWidth(1.0);
-        c->drawGraphicsPath(bodyPath,VSTGUI::CDrawContext::kPathStroked);
-        bodyPath->forget();
+        c->setFrameColor({26,31,37,255});
+        c->drawGraphicsPath(collarPath,VSTGUI::CDrawContext::kPathStroked);
+        collarPath->forget();
     }
 
-    // Subtle face highlight gives depth without looking chrome-plated.
-    c->setFrameColor({255,255,255,72});
+    c->setFrameColor({44,50,57,190});
     c->setLineWidth(1.0);
-    c->drawArc({body.left+2,body.top+2,body.right-2,body.bottom-2},
-               205.f,325.f,VSTGUI::kDrawStroked);
+    for(int i=0;i<18;++i) {
+        const double ka=(2.0*kPi*static_cast<double>(i))/18.0;
+        const double r1=collarR*0.80;
+        const double r2=collarR*0.97;
+        c->drawLine({p.x+std::cos(ka)*r1,p.y+std::sin(ka)*r1},
+                    {p.x+std::cos(ka)*r2,p.y+std::sin(ka)*r2});
+    }
 
-    // Black position marker.
-    const double markerR=bodyR;
-    c->setFrameColor({9,12,15,255});
-    c->setLineWidth(2.2);
-    c->drawLine({p.x+std::cos(a)*markerR*0.30,p.y+std::sin(a)*markerR*0.30},
-                {p.x+std::cos(a)*markerR*0.82,p.y+std::sin(a)*markerR*0.82});
+    // Black separator between collar and cap.
+    const double separatorR=size*0.278;
+    c->setFillColor({8,11,14,255});
+    c->drawEllipse({p.x-separatorR,p.y-separatorR,p.x+separatorR,p.y+separatorR},
+                   VSTGUI::kDrawFilled);
+
+    // Raised brushed-metal cap.
+    const double capR=size*0.246;
+    VSTGUI::CRect cap(p.x-capR,p.y-capR,p.x+capR,p.y+capR);
+    auto* capPath=c->createRoundRectGraphicsPath(cap,capR);
+    if(capPath) {
+        auto* silver=VSTGUI::CGradient::create(0.0,1.0,
+            VSTGUI::CColor{239,242,245,255},VSTGUI::CColor{118,128,138,255});
+        if(silver) {
+            c->fillLinearGradient(capPath,*silver,cap.getTopLeft(),cap.getBottomLeft(),false);
+            silver->forget();
+        }
+        c->setFrameColor({38,44,50,255});
+        c->setLineWidth(1.0);
+        c->drawGraphicsPath(capPath,VSTGUI::CDrawContext::kPathStroked);
+        capPath->forget();
+    }
+
+    // Specular metal highlights.
+    c->setFrameColor({255,255,255,105});
+    c->setLineWidth(1.0);
+    c->drawArc({cap.left+1.5,cap.top+1.5,cap.right-1.5,cap.bottom-1.5},
+               202.f,323.f,VSTGUI::kDrawStroked);
+    c->setFrameColor({42,47,53,115});
+    c->drawArc({cap.left+2.5,cap.top+2.5,cap.right-2.5,cap.bottom-2.5},
+               20.f,145.f,VSTGUI::kDrawStroked);
+
+    // Engraved black position line.
+    c->setFrameColor({5,8,11,255});
+    c->setLineWidth(2.3);
+    c->drawLine({p.x+std::cos(a)*capR*0.28,p.y+std::sin(a)*capR*0.28},
+                {p.x+std::cos(a)*capR*0.84,p.y+std::sin(a)*capR*0.84});
+    c->setFrameColor({255,255,255,80});
+    c->setLineWidth(0.8);
+    c->drawLine({p.x+std::cos(a)*capR*0.30-0.7,p.y+std::sin(a)*capR*0.30-0.7},
+                {p.x+std::cos(a)*capR*0.82-0.7,p.y+std::sin(a)*capR*0.82-0.7});
     setDirty(false);
 }
 
@@ -389,6 +427,63 @@ void UglyToggle::draw(VSTGUI::CDrawContext* c)
     else textRect.left=thumb.right+1.0;
     c->drawString(VSTGUI::UTF8String(on?"ON":"OFF"),textRect,VSTGUI::kCenterText);
     setDirty(false);
+}
+
+UglyZoomControl::UglyZoomControl(const VSTGUI::CRect& r,VSTGUI::VST3Editor* editor)
+: VSTGUI::CControl(r,nullptr,-1,nullptr),editor_(editor)
+{
+    setTransparency(true);
+    setWantsFocus(true);
+}
+
+UglyZoomControl::UglyZoomControl(const UglyZoomControl& o)
+: VSTGUI::CControl(o),editor_(o.editor_) {}
+
+void UglyZoomControl::draw(VSTGUI::CDrawContext* c)
+{
+    const auto r=getViewSize();
+    c->setDrawMode(VSTGUI::kAntiAliasing|VSTGUI::kNonIntegralMode);
+
+    const double gap=4.0;
+    const double w=(r.getWidth()-gap)*0.5;
+    VSTGUI::CRect minus(r.left,r.top,r.left+w,r.bottom);
+    VSTGUI::CRect plus(r.right-w,r.top,r.right,r.bottom);
+
+    auto drawButton=[&](const VSTGUI::CRect& b,const char* text) {
+        VSTGUI::CRect sh=b; sh.offset(1.2,1.8);
+        fillRound(c,sh,4.0,{0,0,0,110},{0,0,0,0},0.0);
+        gradientRound(c,b,4.0,{66,74,83,255},{24,29,35,255},{117,128,139,210},1.0);
+        c->setFrameColor({255,255,255,45});
+        c->drawLine({b.left+4,b.top+2},{b.right-4,b.top+2});
+        c->setFont(VSTGUI::kNormalFont,11.0,VSTGUI::kBoldFace);
+        c->setFontColor({225,232,238,255});
+        c->drawString(VSTGUI::UTF8String(text),b,VSTGUI::kCenterText);
+    };
+    drawButton(minus,"-");
+    drawButton(plus,"+");
+    setDirty(false);
+}
+
+VSTGUI::CMouseEventResult UglyZoomControl::onMouseDown(
+    VSTGUI::CPoint& where,const VSTGUI::CButtonState& buttons)
+{
+    if(!buttons.isLeftButton() || !editor_ || !getViewSize().pointInside(where))
+        return VSTGUI::kMouseEventNotHandled;
+
+    static constexpr double zooms[] {1.0,1.25,1.5,1.75,2.0};
+    const double current=editor_->getZoomFactor();
+    int index=0;
+    double best=std::abs(current-zooms[0]);
+    for(int i=1;i<5;++i) {
+        const double d=std::abs(current-zooms[i]);
+        if(d<best) { best=d; index=i; }
+    }
+
+    const bool plus=where.x>=getViewSize().getCenter().x;
+    index=std::clamp(index+(plus?1:-1),0,4);
+    editor_->setZoomFactor(zooms[index]);
+    invalid();
+    return VSTGUI::kMouseDownEventHandledButDontNeedMovedOrUpEvents;
 }
 
 } // namespace UglyReverb
