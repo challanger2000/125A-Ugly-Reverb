@@ -117,112 +117,99 @@ void modulePanel(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r,
 
 void panelWear(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r,int variant)
 {
-    // Visible but controlled ageing: chipped paint exposes a cool metal edge,
-    // darker rub marks break up the clean blue surface, and a few brown traces
-    // suggest oxidation without turning the panel into comic-book rust.
-    const int strength = variant==1 ? 2 : 1;
-    const VSTGUI::CColor metal  {205,216,224,static_cast<uint8_t>(105+strength*24)};
-    const VSTGUI::CColor dark   {0,5,10,static_cast<uint8_t>(128+strength*18)};
-    const VSTGUI::CColor oxide  {142,78,42,static_cast<uint8_t>(78+strength*18)};
-    const VSTGUI::CColor rub    {7,18,30,static_cast<uint8_t>(30+strength*12)};
+    // v3: ageing is concentrated at edges and handling points.  Avoid broad,
+    // painted-on grunge shapes so the panels still read as real hardware.
+    const int strength=variant==1?2:1;
+    const VSTGUI::CColor metal {205,216,224,static_cast<uint8_t>(104+strength*22)};
+    const VSTGUI::CColor dark  {0,5,10,static_cast<uint8_t>(112+strength*14)};
+    const VSTGUI::CColor oxide {142,78,42,static_cast<uint8_t>(70+strength*15)};
 
-    // Uneven worn paint patches.  These are deliberately asymmetric.
-    c->setFillColor(rub);
-    c->drawEllipse({r.left+18.0,r.top+42.0,r.left+96.0,r.top+77.0},VSTGUI::kDrawFilled);
-    c->drawEllipse({r.right-126.0,r.top+118.0,r.right-24.0,r.top+170.0},VSTGUI::kDrawFilled);
-    if(variant==1) {
-        c->setFillColor({2,10,18,58});
-        c->drawEllipse({r.left+72.0,r.top+205.0,r.left+208.0,r.top+274.0},VSTGUI::kDrawFilled);
-        c->setFillColor({65,91,111,25});
-        c->drawEllipse({r.left+138.0,r.top+18.0,r.left+300.0,r.top+86.0},VSTGUI::kDrawFilled);
-    } else {
-        c->setFillColor({53,78,99,18});
-        c->drawEllipse({r.left+88.0,r.top+214.0,r.right-28.0,r.top+276.0},VSTGUI::kDrawFilled);
-    }
-
-    c->setLineWidth(1.4);
-
+    c->setLineWidth(1.25);
     auto nick=[&](double x,double y,double len,bool vertical,const VSTGUI::CColor& color) {
         c->setFrameColor(color);
         if(vertical)
-            c->drawLine({x,y},{x+1.1,y+len});
+            c->drawLine({x,y},{x+0.9,y+len});
         else
-            c->drawLine({x,y},{x+len,y+1.0});
+            c->drawLine({x,y},{x+len,y+0.8});
     };
 
     const double shift=static_cast<double>(variant)*7.0;
 
-    // Chipped top/bottom edges: brighter and longer than v1 so they survive
-    // normal DAW scaling.
-    nick(r.left+20.0+shift,r.top+1.2,16.0,false,metal);
-    nick(r.left+73.0+shift*0.4,r.top+1.8,8.0,false,dark);
-    nick(r.right-78.0-shift*0.4,r.top+1.0,20.0,false,metal);
-    nick(r.right-43.0-shift*0.2,r.top+2.0,7.0,false,oxide);
-    nick(r.left+1.2,r.top+82.0+shift,14.0,true,dark);
-    nick(r.left+1.0,r.top+231.0-shift*0.5,11.0,true,metal);
-    nick(r.right-1.8,r.top+145.0-shift*0.4,15.0,true,metal);
-    nick(r.right-1.0,r.bottom-88.0+shift*0.3,10.0,true,oxide);
-    nick(r.left+40.0+shift,r.bottom-1.6,22.0,false,dark);
-    nick(r.left+114.0+shift*0.5,r.bottom-1.1,13.0,false,metal);
-    nick(r.right-92.0-shift*0.4,r.bottom-1.4,15.0,false,oxide);
+    // Paint chips around exposed edges.
+    nick(r.left+20.0+shift,r.top+1.2,15.0,false,metal);
+    nick(r.left+73.0+shift*0.4,r.top+1.8,7.0,false,dark);
+    nick(r.right-78.0-shift*0.4,r.top+1.0,18.0,false,metal);
+    nick(r.right-43.0-shift*0.2,r.top+2.0,6.0,false,oxide);
+    nick(r.left+1.2,r.top+82.0+shift,12.0,true,dark);
+    nick(r.left+1.0,r.top+231.0-shift*0.5,10.0,true,metal);
+    nick(r.right-1.8,r.top+145.0-shift*0.4,13.0,true,metal);
+    nick(r.right-1.0,r.bottom-88.0+shift*0.3,9.0,true,oxide);
+    nick(r.left+40.0+shift,r.bottom-1.6,19.0,false,dark);
+    nick(r.left+114.0+shift*0.5,r.bottom-1.1,11.0,false,metal);
+    nick(r.right-92.0-shift*0.4,r.bottom-1.4,13.0,false,oxide);
 
-    // Irregular scratches and scrapes.
-    c->setFrameColor({215,224,229,72});
-    c->setLineWidth(1.0);
-    c->drawLine({r.left+22.0,r.top+35.0+shift},{r.left+49.0,r.top+29.0+shift});
-    c->drawLine({r.right-58.0,r.bottom-31.0-shift*0.3},{r.right-27.0,r.bottom-38.0-shift*0.3});
-    c->drawLine({r.left+54.0,r.top+178.0},{r.left+79.0,r.top+172.0});
+    // Fine, irregular surface scratches.  The central panel gets more of them,
+    // but never a full-width decorative slash.
+    c->setFrameColor({215,224,229,60});
+    c->setLineWidth(0.9);
+    c->drawLine({r.left+22.0,r.top+35.0+shift},{r.left+45.0,r.top+30.0+shift});
+    c->drawLine({r.right-54.0,r.bottom-31.0-shift*0.3},{r.right-31.0,r.bottom-36.0-shift*0.3});
+    c->drawLine({r.left+54.0,r.top+178.0},{r.left+73.0,r.top+174.0});
 
     c->setFrameColor(oxide);
-    c->drawLine({r.left+9.0,r.bottom-58.0+shift*0.25},{r.left+24.0,r.bottom-53.0+shift*0.25});
-    c->drawLine({r.right-29.0,r.top+78.0},{r.right-18.0,r.top+82.0});
+    c->drawLine({r.left+9.0,r.bottom-58.0+shift*0.25},{r.left+21.0,r.bottom-54.0+shift*0.25});
+    c->drawLine({r.right-29.0,r.top+78.0},{r.right-19.0,r.top+81.0});
 
-    // One pronounced scrape in the central/ugly panel.
     if(variant==1) {
-        c->setFrameColor({221,227,231,92});
-        c->setLineWidth(1.6);
-        c->drawLine({r.left+22.0,r.top+286.0},{r.right-28.0,r.top+257.0});
-        c->setFrameColor({0,5,9,88});
-        c->setLineWidth(2.2);
-        c->drawLine({r.left+24.0,r.top+289.0},{r.right-31.0,r.top+261.0});
+        // Broken scrape: three mismatched fragments instead of two parallel lines.
+        c->setFrameColor({220,227,231,72});
+        c->setLineWidth(1.1);
+        c->drawLine({r.left+72.0,r.top+286.0},{r.left+119.0,r.top+279.0});
+        c->drawLine({r.left+130.0,r.top+278.0},{r.left+168.0,r.top+272.0});
+        c->drawLine({r.left+183.0,r.top+269.0},{r.left+207.0,r.top+266.0});
 
-        // Small dent: dark centre with a faint metallic crescent.
-        c->setFillColor({0,5,9,68});
-        c->drawEllipse({r.right-88.0,r.top+188.0,r.right-52.0,r.top+208.0},VSTGUI::kDrawFilled);
-        c->setFrameColor({203,214,221,58});
-        c->setLineWidth(1.0);
-        c->drawArc({r.right-90.0,r.top+186.0,r.right-50.0,r.top+210.0},
-                   190.f,315.f,VSTGUI::kDrawStroked);
+        c->setFrameColor({0,5,9,72});
+        c->setLineWidth(1.4);
+        c->drawLine({r.left+104.0,r.top+284.0},{r.left+132.0,r.top+281.0});
+        c->drawLine({r.left+171.0,r.top+275.0},{r.left+194.0,r.top+271.0});
+
+        // Small impact/scuff made from irregular strokes, not a filled oval.
+        c->setFrameColor({1,6,10,76});
+        c->setLineWidth(1.6);
+        c->drawLine({r.right-77.0,r.top+194.0},{r.right-62.0,r.top+200.0});
+        c->drawLine({r.right-72.0,r.top+202.0},{r.right-57.0,r.top+197.0});
+        c->setFrameColor({205,215,221,48});
+        c->setLineWidth(0.8);
+        c->drawLine({r.right-79.0,r.top+192.0},{r.right-68.0,r.top+194.0});
     }
 }
 
 void wornControlHalo(VSTGUI::CDrawContext* c,const VSTGUI::CPoint& p,double radius,int variant)
 {
-    // METAL/CLANG/RATTLE should look visibly overused.  Use multiple broken
-    // arcs instead of a perfect halo so the wear feels mechanical, not graphic.
+    // Short broken marks imply repeated handling without drawing an obvious ring.
     VSTGUI::CRect ring(p.x-radius,p.y-radius,p.x+radius,p.y+radius);
-    VSTGUI::CRect outer(p.x-radius-3.0,p.y-radius-3.0,p.x+radius+3.0,p.y+radius+3.0);
+    VSTGUI::CRect outer(p.x-radius-2.0,p.y-radius-2.0,p.x+radius+2.0,p.y+radius+2.0);
 
-    c->setLineWidth(1.6);
-    c->setFrameColor({214,221,225,72});
-    c->drawArc(ring,186.f+variant*8.f,256.f+variant*6.f,VSTGUI::kDrawStroked);
-    c->drawArc(ring,286.f+variant*6.f,333.f+variant*5.f,VSTGUI::kDrawStroked);
-
-    c->setLineWidth(2.1);
-    c->setFrameColor({0,4,8,92});
-    c->drawArc(outer,8.f+variant*10.f,91.f+variant*8.f,VSTGUI::kDrawStroked);
-
-    c->setFrameColor({148,82,43,90});
-    c->setLineWidth(1.2);
-    c->drawLine({p.x-radius*0.88,p.y+radius*0.62},
-                {p.x-radius*0.52,p.y+radius*0.43});
-    c->drawLine({p.x+radius*0.48,p.y-radius*0.80},
-                {p.x+radius*0.68,p.y-radius*0.61});
-
-    c->setFrameColor({218,225,229,66});
     c->setLineWidth(1.0);
-    c->drawLine({p.x-radius*0.30,p.y-radius*1.05},
-                {p.x+radius*0.18,p.y-radius*0.93});
+    c->setFrameColor({216,223,227,48});
+    c->drawArc(ring,196.f+variant*11.f,222.f+variant*10.f,VSTGUI::kDrawStroked);
+    c->drawArc(ring,302.f+variant*7.f,322.f+variant*8.f,VSTGUI::kDrawStroked);
+
+    c->setFrameColor({0,4,8,58});
+    c->setLineWidth(1.2);
+    c->drawArc(outer,35.f+variant*9.f,62.f+variant*9.f,VSTGUI::kDrawStroked);
+    c->drawArc(outer,116.f+variant*6.f,133.f+variant*6.f,VSTGUI::kDrawStroked);
+
+    c->setFrameColor({148,82,43,68});
+    c->setLineWidth(0.9);
+    c->drawLine({p.x-radius*0.84,p.y+radius*0.58},
+                {p.x-radius*0.61,p.y+radius*0.47});
+    c->drawLine({p.x+radius*0.47,p.y-radius*0.82},
+                {p.x+radius*0.61,p.y-radius*0.69});
+
+    c->setFrameColor({220,226,230,46});
+    c->drawLine({p.x-radius*0.18,p.y-radius*1.02},
+                {p.x+radius*0.10,p.y-radius*0.96});
 }
 
 void degradedPlate(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r)
@@ -273,21 +260,73 @@ void degradedPlate(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r)
 
 void warningStencil(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r)
 {
-    // Faded industrial marking, intentionally imperfect and low-profile.
-    c->setFont(VSTGUI::kNormalFont,7.5,VSTGUI::kBoldFace);
-    c->setFontColor({192,155,76,175});
-    c->drawString(VSTGUI::UTF8String("CAUTION // UNSTABLE"),r,VSTGUI::kCenterText);
+    // Faded stencil: readable only after a second glance.
+    c->setFont(VSTGUI::kNormalFont,6.0,VSTGUI::kBoldFace);
+    c->setFontColor({190,154,78,96});
+    c->drawString(VSTGUI::UTF8String("CAUTION / UNSTABLE"),r,VSTGUI::kCenterText);
 
-    c->setFrameColor({192,155,76,105});
-    c->setLineWidth(1.0);
-    c->drawLine({r.left+7.0,r.bottom-1.0},{r.left+47.0,r.bottom-1.0});
-    c->drawLine({r.right-38.0,r.bottom-1.0},{r.right-7.0,r.bottom-1.0});
+    c->setFrameColor({190,154,78,54});
+    c->setLineWidth(0.8);
+    c->drawLine({r.left+5.0,r.bottom-1.0},{r.left+26.0,r.bottom-1.0});
+    c->drawLine({r.right-21.0,r.bottom-1.0},{r.right-5.0,r.bottom-1.0});
 
-    // Worn-out gaps across the stencil.
-    c->setFrameColor({6,22,38,155});
-    c->drawLine({r.left+39.0,r.top+2.0},{r.left+55.0,r.top+2.0});
-    c->drawLine({r.right-58.0,r.top+8.0},{r.right-46.0,r.top+8.0});
+    // Two tiny missing-print gaps.
+    c->setFrameColor({7,24,40,112});
+    c->drawLine({r.left+27.0,r.top+2.0},{r.left+34.0,r.top+2.0});
+    c->drawLine({r.right-29.0,r.top+7.0},{r.right-23.0,r.top+7.0});
 }
+
+void drawGlassOverlay(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r)
+{
+    // Very subtle used protective glass over the complete editor.  The broad
+    // reflections are intentionally low-alpha; small wipe/scratch marks stop
+    // the result from reading as modern high-gloss UI.
+    c->setDrawMode(VSTGUI::kAntiAliasing|VSTGUI::kNonIntegralMode);
+
+    auto* full=c->createRoundRectGraphicsPath(r,0.0);
+    if(full) {
+        auto* haze=VSTGUI::CGradient::create(
+            0.0,1.0,VSTGUI::CColor{236,244,250,10},VSTGUI::CColor{168,190,205,2});
+        if(haze) {
+            c->fillLinearGradient(full,*haze,r.getTopLeft(),r.getBottomLeft(),false);
+            haze->forget();
+        }
+        full->forget();
+    }
+
+    auto drawReflection=[&](double x1,double x2,double drift,uint8_t alpha) {
+        auto* p=c->createGraphicsPath();
+        if(!p) return;
+        p->beginSubpath({r.left+x1,r.top});
+        p->addLine({r.left+x2,r.top});
+        p->addLine({r.left+x2+drift,r.bottom});
+        p->addLine({r.left+x1+drift,r.bottom});
+        p->closeSubpath();
+        c->setFillColor({235,243,248,alpha});
+        c->drawGraphicsPath(p,VSTGUI::CDrawContext::kPathFilled);
+        p->forget();
+    };
+    drawReflection(58.0,93.0,118.0,5);
+    drawReflection(508.0,525.0,72.0,3);
+
+    // Matte wipe traces: broad but almost invisible.
+    c->setFrameColor({224,235,242,11});
+    c->setLineWidth(5.0);
+    c->drawLine({r.left+118.0,r.top+94.0},{r.left+248.0,r.top+76.0});
+    c->drawLine({r.left+465.0,r.top+333.0},{r.left+624.0,r.top+309.0});
+
+    // Fine scratches on the cover itself.
+    c->setLineWidth(0.7);
+    c->setFrameColor({240,246,250,22});
+    c->drawLine({r.left+154.0,r.top+67.0},{r.left+189.0,r.top+62.0});
+    c->drawLine({r.left+565.0,r.top+118.0},{r.left+594.0,r.top+113.0});
+    c->drawLine({r.left+321.0,r.top+394.0},{r.left+352.0,r.top+390.0});
+
+    c->setFrameColor({2,7,11,14});
+    c->drawLine({r.left+214.0,r.top+211.0},{r.left+264.0,r.top+205.0});
+    c->drawLine({r.left+621.0,r.top+287.0},{r.left+650.0,r.top+282.0});
+}
+
 
 } // namespace
 
@@ -336,7 +375,7 @@ void UglyFaceplate::draw(VSTGUI::CDrawContext* c)
     degradedPlate(c,{r.left+30.0,r.top+359.0,r.left+264.0,r.top+405.0});
 
     // Small faded warning stencil in the deliberately unstable network.
-    warningStencil(c,{r.left+374.0,r.top+216.0,r.left+532.0,r.top+232.0});
+    warningStencil(c,{r.left+493.0,r.top+219.0,r.left+594.0,r.top+231.0});
 
     // A couple of isolated chassis scratches stop the outer black shell from
     // looking factory-new while keeping the branding/header readable.
@@ -353,6 +392,18 @@ void UglyFaceplate::draw(VSTGUI::CDrawContext* c)
     c->drawEllipse({r.right-13,r.top+7,r.right-7,r.top+13},VSTGUI::kDrawFilled);
     c->drawEllipse({r.left+7,r.bottom-13,r.left+13,r.bottom-7},VSTGUI::kDrawFilled);
     c->drawEllipse({r.right-13,r.bottom-13,r.right-7,r.bottom-7},VSTGUI::kDrawFilled);
+    setDirty(false);
+}
+
+UglyGlassOverlay::UglyGlassOverlay(const VSTGUI::CRect& r):VSTGUI::CView(r)
+{
+    setMouseEnabled(false);
+    setTransparency(true);
+}
+
+void UglyGlassOverlay::draw(VSTGUI::CDrawContext* c)
+{
+    drawGlassOverlay(c,getViewSize());
     setDirty(false);
 }
 
