@@ -18,6 +18,14 @@ public:
     void draw(VSTGUI::CDrawContext* c) override;
 };
 
+class UglyGlassOverlay final : public VSTGUI::CView {
+public:
+    explicit UglyGlassOverlay(const VSTGUI::CRect& r);
+    UglyGlassOverlay(const UglyGlassOverlay& o) : VSTGUI::CView(o) {}
+    VSTGUI::CBaseObject* newCopy() const override { return new UglyGlassOverlay(*this); }
+    void draw(VSTGUI::CDrawContext* c) override;
+};
+
 class UglyLogo final : public VSTGUI::CView {
 public:
     explicit UglyLogo(const VSTGUI::CRect& r);
