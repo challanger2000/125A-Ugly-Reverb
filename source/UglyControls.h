@@ -1,8 +1,11 @@
 #pragma once
 #include "vstgui/lib/controls/cknob.h"
 #include "vstgui/lib/controls/cbuttons.h"
+#include "vstgui/lib/controls/ccontrol.h"
 #include "vstgui/lib/cview.h"
 #include "vstgui/lib/cbitmap.h"
+#include <string>
+#include <vector>
 
 namespace UglyReverb {
 
@@ -30,6 +33,19 @@ public:
     void draw(VSTGUI::CDrawContext* c) override;
 private:
     VSTGUI::CBitmap* body_ {nullptr};
+};
+
+class UglySelector final : public VSTGUI::CControl {
+public:
+    UglySelector(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag,
+                 std::vector<std::string> labels);
+    UglySelector(const UglySelector& o);
+    VSTGUI::CBaseObject* newCopy() const override { return new UglySelector(*this); }
+    void draw(VSTGUI::CDrawContext* c) override;
+    VSTGUI::CMouseEventResult onMouseDown(VSTGUI::CPoint& where,
+                                           const VSTGUI::CButtonState& buttons) override;
+private:
+    std::vector<std::string> labels_;
 };
 
 class UglyToggle final : public VSTGUI::COnOffButton {
