@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace VSTGUI { class VST3Editor; class CBitmap; }
+namespace VSTGUI { class VST3Editor; class CBitmap; class CMultiFrameBitmap; }
 
 namespace UglyReverb {
 
@@ -39,12 +39,15 @@ public:
     void draw(VSTGUI::CDrawContext* c) override;
 };
 
-class UglyKnob final : public VSTGUI::CKnob {
+class UglyKnob final : public VSTGUI::CKnobBase {
 public:
     UglyKnob(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag);
     UglyKnob(const UglyKnob& o);
+    ~UglyKnob() noexcept override;
     VSTGUI::CBaseObject* newCopy() const override { return new UglyKnob(*this); }
     void draw(VSTGUI::CDrawContext* c) override;
+private:
+    VSTGUI::CMultiFrameBitmap* strip_ {nullptr};
 };
 
 class UglySelector final : public VSTGUI::CControl {
