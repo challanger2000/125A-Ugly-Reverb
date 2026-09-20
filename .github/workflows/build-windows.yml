@@ -1,6 +1,11 @@
 name: Build Windows VST3
 
 on:
+  push:
+    branches:
+      - development
+    paths:
+      - ".github/workflows/build-windows.yml"
   workflow_dispatch:
 
 jobs:
@@ -62,3 +67,5 @@ jobs:
 
 
 
+
+# parameter-audit verification
