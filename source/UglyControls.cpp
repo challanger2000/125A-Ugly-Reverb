@@ -291,28 +291,41 @@ void UglyLogo::draw(VSTGUI::CDrawContext* c)
     setDirty(false);
 }
 
+namespace {
+VSTGUI::CMultiFrameBitmap* createKnobStripForSize(int logicalSize)
+{
+    const int size=(logicalSize<=54)?54:((logicalSize<=56)?56:58);
+    const std::string base="ugly_knob_"+std::to_string(size)+".png";
+    const std::string hi="ugly_knob_"+std::to_string(size)+"#2.0x.png";
+
+    VSTGUI::CMultiFrameBitmapDescription desc;
+    desc.frameSize={static_cast<double>(size),static_cast<double>(size)};
+    desc.numFrames=101;
+    desc.framesPerRow=1;
+
+    auto* strip=new VSTGUI::CMultiFrameBitmap(VSTGUI::CResourceDescription(base.c_str()),desc);
+    VSTGUI::CBitmap hiBitmap(VSTGUI::CResourceDescription(hi.c_str()));
+    if(auto hiPlatform=hiBitmap.getPlatformBitmap()) {
+        hiPlatform->setScaleFactor(2.0);
+        strip->addBitmap(hiPlatform);
+    }
+    return strip;
+}
+} // namespace
+
 UglyKnob::UglyKnob(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag)
 : VSTGUI::CKnobBase(r,l,tag,nullptr)
 {
-    VSTGUI::CMultiFrameBitmapDescription desc;
-    desc.frameSize={125.0,125.0};
-    desc.numFrames=101;
-    desc.framesPerRow=1;
-    strip_=new VSTGUI::CMultiFrameBitmap(
-        VSTGUI::CResourceDescription("Old_amp_black_01.png"),desc);
+    knobPixels_=static_cast<int>(std::lround(std::min(r.getWidth(),r.getHeight())));
+    strip_=createKnobStripForSize(knobPixels_);
     setTransparency(true);
     setWantsFocus(true);
 }
 
 UglyKnob::UglyKnob(const UglyKnob& o)
-: VSTGUI::CKnobBase(o)
+: VSTGUI::CKnobBase(o),knobPixels_(o.knobPixels_)
 {
-    VSTGUI::CMultiFrameBitmapDescription desc;
-    desc.frameSize={125.0,125.0};
-    desc.numFrames=101;
-    desc.framesPerRow=1;
-    strip_=new VSTGUI::CMultiFrameBitmap(
-        VSTGUI::CResourceDescription("Old_amp_black_01.png"),desc);
+    strip_=createKnobStripForSize(knobPixels_);
     setTransparency(true);
     setWantsFocus(true);
 }
@@ -326,11 +339,7 @@ void UglyKnob::draw(VSTGUI::CDrawContext* c)
 {
     if(strip_ && strip_->isLoaded()) {
         const auto index=strip_->normalizedValueToFrameIndex(getValueNormalized());
-        const auto src=strip_->calcFrameRect(index);
-        const auto oldQuality=c->getBitmapInterpolationQuality();
-        c->setBitmapInterpolationQuality(VSTGUI::BitmapInterpolationQuality::kHigh);
-        c->fillRectWithBitmap(strip_,src,getViewSize(),1.f);
-        c->setBitmapInterpolationQuality(oldQuality);
+        strip_->drawFrame(c,index,getViewSize().getTopLeft());
     }
     setDirty(false);
 }
