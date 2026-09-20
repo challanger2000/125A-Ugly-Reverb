@@ -75,6 +75,7 @@ private:
     float digital_ = 0.f;
     bool bypass_ = false;
 
+    float smSize_ = size_;
     float smDecay_ = decay_;
     float smPreDelay_ = preDelay_;
     float smDiffusion_ = diffusion_;
@@ -82,6 +83,7 @@ private:
     float smMetal_ = metal_;
     float smClang_ = clang_;
     float smRattle_ = rattle_;
+    float smBody_ = body_;
     float smWidth_ = width_;
     float smMix_ = mix_;
     float smOutput_ = output_;
