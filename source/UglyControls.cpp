@@ -292,117 +292,46 @@ void UglyLogo::draw(VSTGUI::CDrawContext* c)
 }
 
 UglyKnob::UglyKnob(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag)
-: VSTGUI::CKnob(r,l,tag,nullptr,nullptr)
+: VSTGUI::CKnobBase(r,l,tag,nullptr)
 {
-    setStartAngle(static_cast<float>(135.0*kPi/180.0));
-    setRangeAngle(static_cast<float>(270.0*kPi/180.0));
+    VSTGUI::CMultiFrameBitmapDescription desc;
+    desc.frameSize={125.0,125.0};
+    desc.numFrames=101;
+    desc.framesPerRow=1;
+    strip_=new VSTGUI::CMultiFrameBitmap(
+        VSTGUI::CResourceDescription("Old_amp_black_01.png"),desc);
     setTransparency(true);
     setWantsFocus(true);
 }
 
-UglyKnob::UglyKnob(const UglyKnob& o):VSTGUI::CKnob(o) {}
+UglyKnob::UglyKnob(const UglyKnob& o)
+: VSTGUI::CKnobBase(o)
+{
+    VSTGUI::CMultiFrameBitmapDescription desc;
+    desc.frameSize={125.0,125.0};
+    desc.numFrames=101;
+    desc.framesPerRow=1;
+    strip_=new VSTGUI::CMultiFrameBitmap(
+        VSTGUI::CResourceDescription("Old_amp_black_01.png"),desc);
+    setTransparency(true);
+    setWantsFocus(true);
+}
+
+UglyKnob::~UglyKnob() noexcept
+{
+    if(strip_) strip_->forget();
+}
 
 void UglyKnob::draw(VSTGUI::CDrawContext* c)
 {
-    const auto r=getViewSize();
-    const auto p=r.getCenter();
-    const double size=std::min(r.getWidth(),r.getHeight());
-    const double v=std::clamp(static_cast<double>(getValueNormalized()),0.0,1.0);
-    const double a=(135.0+270.0*v)*kPi/180.0;
-
-    c->setDrawMode(VSTGUI::kAntiAliasing|VSTGUI::kNonIntegralMode);
-
-    const double arcR=size*0.455;
-    const VSTGUI::CRect arcBox(p.x-arcR,p.y-arcR,p.x+arcR,p.y+arcR);
-    c->setLineWidth(2.0);
-    c->setFrameColor({15,25,36,255});
-    c->drawArc(arcBox,135.f,405.f,VSTGUI::kDrawStroked);
-    if(v>0.001) {
-        c->setFrameColor({70,159,226,235});
-        c->drawArc(arcBox,135.f,static_cast<float>(135.0+270.0*v),VSTGUI::kDrawStroked);
+    if(strip_ && strip_->isLoaded()) {
+        const auto index=strip_->normalizedValueToFrameIndex(getValueNormalized());
+        const auto src=strip_->calcFrameRect(index);
+        const auto oldQuality=c->getBitmapInterpolationQuality();
+        c->setBitmapInterpolationQuality(VSTGUI::BitmapInterpolationQuality::kHigh);
+        c->fillRectWithBitmap(strip_,src,getViewSize(),1.f);
+        c->setBitmapInterpolationQuality(oldQuality);
     }
-
-    // Deep mounting shadow.
-    const double shadowR=size*0.355;
-    c->setFillColor({0,0,0,125});
-    c->drawEllipse({p.x-shadowR+2.0,p.y-shadowR+4.0,
-                    p.x+shadowR+4.0,p.y+shadowR+8.0},VSTGUI::kDrawFilled);
-
-    // Black recessed bezel.
-    const double bezelR=size*0.375;
-    c->setFillColor({2,4,6,255});
-    c->drawEllipse({p.x-bezelR,p.y-bezelR,p.x+bezelR,p.y+bezelR},VSTGUI::kDrawFilled);
-    c->setFrameColor({65,74,84,255});
-    c->setLineWidth(1.0);
-    c->drawEllipse({p.x-bezelR,p.y-bezelR,p.x+bezelR,p.y+bezelR},VSTGUI::kDrawStroked);
-
-    // Steel collar with radial knurling.
-    const double collarR=size*0.325;
-    VSTGUI::CRect collar(p.x-collarR,p.y-collarR,p.x+collarR,p.y+collarR);
-    auto* collarPath=c->createRoundRectGraphicsPath(collar,collarR);
-    if(collarPath) {
-        auto* steel=VSTGUI::CGradient::create(0.0,1.0,
-            VSTGUI::CColor{205,212,219,255},VSTGUI::CColor{74,82,91,255});
-        if(steel) {
-            c->fillLinearGradient(collarPath,*steel,collar.getTopLeft(),collar.getBottomLeft(),false);
-            steel->forget();
-        }
-        c->setFrameColor({26,31,37,255});
-        c->drawGraphicsPath(collarPath,VSTGUI::CDrawContext::kPathStroked);
-        collarPath->forget();
-    }
-
-    c->setFrameColor({44,50,57,190});
-    c->setLineWidth(1.0);
-    for(int i=0;i<18;++i) {
-        const double ka=(2.0*kPi*static_cast<double>(i))/18.0;
-        const double r1=collarR*0.80;
-        const double r2=collarR*0.97;
-        c->drawLine({p.x+std::cos(ka)*r1,p.y+std::sin(ka)*r1},
-                    {p.x+std::cos(ka)*r2,p.y+std::sin(ka)*r2});
-    }
-
-    // Black separator between collar and cap.
-    const double separatorR=size*0.278;
-    c->setFillColor({8,11,14,255});
-    c->drawEllipse({p.x-separatorR,p.y-separatorR,p.x+separatorR,p.y+separatorR},
-                   VSTGUI::kDrawFilled);
-
-    // Raised brushed-metal cap.
-    const double capR=size*0.246;
-    VSTGUI::CRect cap(p.x-capR,p.y-capR,p.x+capR,p.y+capR);
-    auto* capPath=c->createRoundRectGraphicsPath(cap,capR);
-    if(capPath) {
-        auto* silver=VSTGUI::CGradient::create(0.0,1.0,
-            VSTGUI::CColor{239,242,245,255},VSTGUI::CColor{118,128,138,255});
-        if(silver) {
-            c->fillLinearGradient(capPath,*silver,cap.getTopLeft(),cap.getBottomLeft(),false);
-            silver->forget();
-        }
-        c->setFrameColor({38,44,50,255});
-        c->setLineWidth(1.0);
-        c->drawGraphicsPath(capPath,VSTGUI::CDrawContext::kPathStroked);
-        capPath->forget();
-    }
-
-    // Specular metal highlights.
-    c->setFrameColor({255,255,255,105});
-    c->setLineWidth(1.0);
-    c->drawArc({cap.left+1.5,cap.top+1.5,cap.right-1.5,cap.bottom-1.5},
-               202.f,323.f,VSTGUI::kDrawStroked);
-    c->setFrameColor({42,47,53,115});
-    c->drawArc({cap.left+2.5,cap.top+2.5,cap.right-2.5,cap.bottom-2.5},
-               20.f,145.f,VSTGUI::kDrawStroked);
-
-    // Engraved black position line.
-    c->setFrameColor({5,8,11,255});
-    c->setLineWidth(2.3);
-    c->drawLine({p.x+std::cos(a)*capR*0.28,p.y+std::sin(a)*capR*0.28},
-                {p.x+std::cos(a)*capR*0.84,p.y+std::sin(a)*capR*0.84});
-    c->setFrameColor({255,255,255,80});
-    c->setLineWidth(0.8);
-    c->drawLine({p.x+std::cos(a)*capR*0.30-0.7,p.y+std::sin(a)*capR*0.30-0.7},
-                {p.x+std::cos(a)*capR*0.82-0.7,p.y+std::sin(a)*capR*0.82-0.7});
     setDirty(false);
 }
 
