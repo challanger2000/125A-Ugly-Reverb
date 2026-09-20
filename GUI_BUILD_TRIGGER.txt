@@ -1,1 +1,0 @@
-Verify worn hardware GUI controls.
