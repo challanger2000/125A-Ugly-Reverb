@@ -75,6 +75,8 @@ smtg_target_add_plugin_resources(UglyReverb
     resource/ugly_reverb.uidesc
     resource/125A_Logo_Master_FINAL.svg
     resource/ugly_reverb_knob_master.png
+    resource/ugly_reverb_toggle_off.png
+    resource/ugly_reverb_toggle_on.png
 )
 
 smtg_target_configure_version_file(UglyReverb)
