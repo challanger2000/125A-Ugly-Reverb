@@ -256,7 +256,7 @@ UglyTextureOverlay::UglyTextureOverlay(const UglyTextureOverlay& o)
 {
     setMouseEnabled(false);
     setTransparency(true);
-    bitmap_=new VSTGUI::CBitmap(VSTGUI::CResourceDescription(resourceName_.c_str()));
+    bitmap_=createMultiResolutionBitmap(resourceName_);
 }
 
 UglyTextureOverlay::~UglyTextureOverlay() noexcept
