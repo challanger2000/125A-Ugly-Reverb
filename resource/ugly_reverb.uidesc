@@ -12,6 +12,7 @@
     <color name="Marker" rgba="#171613ff"/>
   </colors>
   <template background-color="Panel" class="CViewContainer" maxSize="760, 430" minSize="760, 430" mouse-enabled="true" name="view" opacity="1" origin="0, 0" size="760, 430" transparent="false">
+    <view class="CView" custom-view-name="Faceplate" origin="0, 0" size="760, 430" mouse-enabled="false"/>
     <view back-color="Panel2" class="CTextLabel" font="~ NormalFontBig" font-color="Text" frame-color="Edge" frame-width="1" origin="20, 15" size="720, 38" title="125A AUDIO SOFTWARE     UGLY REVERB" transparent="false" text-alignment="left"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted" frame-width="0" origin="24, 62" size="330, 18" title="SPACE / MATERIAL" transparent="true" text-alignment="left"/>
@@ -19,65 +20,65 @@
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted" frame-width="0" origin="638, 62" size="98, 18" title="MASTER" transparent="true" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="24, 87" size="82, 18" title="Material" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Material" origin="35, 108" size="60, 60" min-value="0" max-value="1" default-value="0" wheel-inc-value="0.1" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Material" origin="35, 108" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Material" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="21, 173" size="88, 20" transparent="false" text-alignment="center" value-precision="2"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="112, 87" size="70, 18" title="Size" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Size" origin="117, 108" size="60, 60" min-value="0" max-value="1" default-value="0.55" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Size" origin="117, 108" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Size" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="117, 173" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="194, 87" size="70, 18" title="Decay" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Decay" origin="199, 108" size="60, 60" min-value="0" max-value="1" default-value="0.58" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Decay" origin="199, 108" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Decay" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="199, 173" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="276, 87" size="70, 18" title="Pre-Delay" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Pre-Delay" origin="281, 108" size="60, 60" min-value="0" max-value="1" default-value="0.08" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="PreDelay" origin="281, 108" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Pre-Delay" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="281, 173" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="385, 87" size="70, 18" title="Diffusion" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Diffusion" origin="390, 108" size="60, 60" min-value="0" max-value="1" default-value="0.45" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Diffusion" origin="390, 108" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Diffusion" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="390, 173" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="467, 87" size="70, 18" title="Damping" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Damping" origin="472, 108" size="60, 60" min-value="0" max-value="1" default-value="0.48" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Damping" origin="472, 108" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Damping" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="472, 173" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="549, 87" size="70, 18" title="Body" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Body" origin="554, 108" size="60, 60" min-value="0" max-value="1" default-value="0.55" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Body" origin="554, 108" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Body" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="554, 173" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="24, 222" size="70, 18" title="Metal" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Metal" origin="29, 243" size="60, 60" min-value="0" max-value="1" default-value="0.68" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Metal" origin="29, 243" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Metal" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="29, 308" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="106, 222" size="70, 18" title="Clang" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Clang" origin="111, 243" size="60, 60" min-value="0" max-value="1" default-value="0.55" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Clang" origin="111, 243" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Clang" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="111, 308" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="188, 222" size="70, 18" title="Rattle" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Rattle" origin="193, 243" size="60, 60" min-value="0" max-value="1" default-value="0.12" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Rattle" origin="193, 243" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Rattle" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="193, 308" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="270, 222" size="70, 18" title="Width" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Width" origin="275, 243" size="60, 60" min-value="0" max-value="1" default-value="0.75" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Width" origin="275, 243" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Width" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="275, 308" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="385, 222" size="92, 18" title="Digital Color" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Digital Color" origin="401, 243" size="60, 60" min-value="0" max-value="1" default-value="0" wheel-inc-value="0.5" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Digital" origin="401, 243" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Digital Color" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="384, 308" size="94, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="486, 222" size="70, 18" title="Bypass" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Bypass" origin="491, 243" size="60, 60" min-value="0" max-value="1" default-value="0" wheel-inc-value="1" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Bypass" origin="491, 243" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Bypass" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="491, 308" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel2" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted" frame-color="Edge" frame-width="1" origin="566, 220" size="168, 110" title="OLD DIGITAL / INDUSTRIAL" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="638, 87" size="98, 18" title="Mix" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Mix" origin="657, 108" size="60, 60" min-value="0" max-value="1" default-value="0.28" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Mix" origin="657, 108" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Mix" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="657, 173" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="638, 222" size="98, 18" title="Output" transparent="true" text-alignment="center"/>
-    <view class="CKnob" control-tag="Output" origin="657, 243" size="60, 60" min-value="0" max-value="1" default-value="0.5" wheel-inc-value="0.01" zoom-factor="10" corona-color="Accent" handle-line-width="2" handle-color="Marker"/>
+    <view class="CView" custom-view-name="Output" origin="657, 243" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Output" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="657, 308" size="60, 20" transparent="false" text-alignment="center"/>
 
     <view back-color="Display" class="CTextLabel" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="24, 360" size="712, 42" title="UGLY REVERB   //   CONTROLLED WRONGNESS   //   125A" transparent="false" text-alignment="center"/>
