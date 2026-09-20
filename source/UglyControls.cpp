@@ -115,6 +115,105 @@ void modulePanel(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r,
     c->drawLine({r.left+12.0,r.top+2.0},{r.right-12.0,r.top+2.0});
 }
 
+void panelWear(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r,int variant)
+{
+    // Deliberately sparse, deterministic damage.  The goal is used industrial
+    // hardware, not a full-screen grunge texture.
+    const VSTGUI::CColor bright {184,202,214,72};
+    const VSTGUI::CColor dark   {1,7,12,120};
+    const VSTGUI::CColor oxide {126,74,47,64};
+
+    c->setLineWidth(1.0);
+
+    auto nick=[&](double x,double y,double len,bool vertical,const VSTGUI::CColor& color) {
+        c->setFrameColor(color);
+        if(vertical)
+            c->drawLine({x,y},{x+0.8,y+len});
+        else
+            c->drawLine({x,y},{x+len,y+0.8});
+    };
+
+    const double shift=static_cast<double>(variant)*7.0;
+    nick(r.left+25.0+shift,r.top+1.5,9.0,false,bright);
+    nick(r.left+78.0+shift*0.6,r.top+2.2,5.0,false,dark);
+    nick(r.right-58.0-shift*0.4,r.top+1.0,11.0,false,bright);
+    nick(r.left+1.5,r.top+92.0+shift,8.0,true,dark);
+    nick(r.right-2.0,r.top+168.0-shift*0.5,7.0,true,bright);
+    nick(r.left+48.0+shift,r.bottom-2.0,13.0,false,dark);
+    nick(r.right-84.0-shift*0.5,r.bottom-1.5,8.0,false,oxide);
+
+    // A few irregular hairline scratches, all kept near the panel perimeter.
+    c->setFrameColor({196,211,221,42});
+    c->drawLine({r.left+18.0,r.top+31.0+shift},{r.left+31.0,r.top+27.0+shift});
+    c->drawLine({r.right-42.0,r.bottom-27.0-shift*0.3},{r.right-27.0,r.bottom-31.0-shift*0.3});
+
+    c->setFrameColor(oxide);
+    c->drawLine({r.left+10.0,r.bottom-52.0+shift*0.25},{r.left+17.0,r.bottom-49.0+shift*0.25});
+}
+
+void wornControlHalo(VSTGUI::CDrawContext* c,const VSTGUI::CPoint& p,double radius,int variant)
+{
+    // Controls in the deliberately ugly section look handled more often than
+    // the rest: faint rub marks, one dark scuff, and a tiny oxidised nick.
+    const double d=radius*2.0;
+    VSTGUI::CRect ring(p.x-radius,p.y-radius,p.x+radius,p.y+radius);
+    c->setLineWidth(1.0);
+    c->setFrameColor({205,214,220,26});
+    c->drawArc(ring,198.f+variant*9.f,292.f+variant*7.f,VSTGUI::kDrawStroked);
+
+    VSTGUI::CRect outer(p.x-radius-2.0,p.y-radius-2.0,p.x+radius+2.0,p.y+radius+2.0);
+    c->setFrameColor({0,0,0,56});
+    c->drawArc(outer,18.f+variant*11.f,112.f+variant*8.f,VSTGUI::kDrawStroked);
+
+    c->setFrameColor({132,78,49,58});
+    c->drawLine({p.x-radius*0.78,p.y+radius*0.58},
+                {p.x-radius*0.55,p.y+radius*0.48});
+}
+
+void degradedPlate(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r)
+{
+    // Small battered service plate.  It makes the "ugly" concept intentional
+    // without turning the whole UI into a novelty graphic.
+    VSTGUI::CRect shadow=r;
+    shadow.offset(1.5,2.0);
+    fillRound(c,shadow,3.0,{0,0,0,92},{0,0,0,0},0.0);
+    gradientRound(c,r,3.0,{21,31,40,222},{8,14,20,232},{111,128,140,104},1.0);
+
+    // Uneven worn edge/highlight.
+    c->setLineWidth(1.0);
+    c->setFrameColor({213,220,224,54});
+    c->drawLine({r.left+12.0,r.top+1.0},{r.left+49.0,r.top+1.0});
+    c->drawLine({r.right-64.0,r.bottom-1.0},{r.right-23.0,r.bottom-1.0});
+    c->setFrameColor({128,74,45,70});
+    c->drawLine({r.left+5.0,r.bottom-7.0},{r.left+17.0,r.bottom-4.0});
+
+    // Two old fasteners, deliberately not perfectly identical.
+    c->setFillColor({58,64,69,230});
+    c->drawEllipse({r.left+6.0,r.top+6.0,r.left+11.0,r.top+11.0},VSTGUI::kDrawFilled);
+    c->drawEllipse({r.right-11.0,r.bottom-11.0,r.right-6.0,r.bottom-6.0},VSTGUI::kDrawFilled);
+    c->setFrameColor({9,11,13,220});
+    c->drawLine({r.left+6.8,r.top+8.7},{r.left+10.1,r.top+7.4});
+    c->drawLine({r.right-10.0,r.bottom-9.5},{r.right-6.8,r.bottom-7.2});
+
+    c->setFont(VSTGUI::kNormalFont,8.0,VSTGUI::kBoldFace);
+    c->setFontColor({170,181,188,175});
+    VSTGUI::CRect title=r;
+    title.inset(18.0,4.0);
+    title.bottom=title.top+12.0;
+    c->drawString(VSTGUI::UTF8String("DEGRADED SPACE"),title,VSTGUI::kCenterText);
+
+    c->setFont(VSTGUI::kNormalFont,6.5,VSTGUI::kNormalFace);
+    c->setFontColor({111,126,137,150});
+    VSTGUI::CRect sub=r;
+    sub.inset(18.0,4.0);
+    sub.top+=13.0;
+    c->drawString(VSTGUI::UTF8String("SERVICE UNIT // 125A"),sub,VSTGUI::kCenterText);
+
+    // One intentional scrape through the lower print.
+    c->setFrameColor({205,213,218,48});
+    c->drawLine({r.left+54.0,r.bottom-7.0},{r.left+96.0,r.bottom-10.0});
+}
+
 } // namespace
 
 UglyFaceplate::UglyFaceplate(const VSTGUI::CRect& r):VSTGUI::CView(r)
@@ -144,6 +243,31 @@ void UglyFaceplate::draw(VSTGUI::CDrawContext* c)
                 {18,59,103,255},{8,30,56,255});
     modulePanel(c,{r.left+628.0,r.top+70.0,r.left+744.0,r.top+414.0},
                 {24,74,121,255},{10,37,67,255});
+
+    const VSTGUI::CRect leftPanel  {r.left+16.0,r.top+70.0,r.left+278.0,r.top+414.0};
+    const VSTGUI::CRect uglyPanel  {r.left+288.0,r.top+70.0,r.left+618.0,r.top+414.0};
+    const VSTGUI::CRect masterPanel{r.left+628.0,r.top+70.0,r.left+744.0,r.top+414.0};
+    panelWear(c,leftPanel,0);
+    panelWear(c,uglyPanel,1);
+    panelWear(c,masterPanel,2);
+
+    // The character section looks most "handled": these marks sit behind the
+    // actual controls and remain subtle at normal viewing size.
+    wornControlHalo(c,{r.left+340.0,r.top+295.0},32.0,0); // METAL
+    wornControlHalo(c,{r.left+441.0,r.top+295.0},32.0,1); // CLANG
+    wornControlHalo(c,{r.left+542.0,r.top+295.0},32.0,2); // RATTLE
+
+    // Free space below the left controls becomes a small battered service plate.
+    degradedPlate(c,{r.left+36.0,r.top+366.0,r.left+258.0,r.top+401.0});
+
+    // A couple of isolated chassis scratches stop the outer black shell from
+    // looking factory-new while keeping the branding/header readable.
+    c->setLineWidth(1.0);
+    c->setFrameColor({126,137,145,48});
+    c->drawLine({r.left+123.0,r.top+18.0},{r.left+147.0,r.top+15.0});
+    c->drawLine({r.right-86.0,r.top+49.0},{r.right-55.0,r.top+46.0});
+    c->setFrameColor({116,68,43,46});
+    c->drawLine({r.left+8.0,r.top+201.0},{r.left+12.0,r.top+218.0});
 
     // Small chassis feet/details keep the black frame from looking flat.
     c->setFillColor({23,27,33,255});
