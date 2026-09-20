@@ -209,14 +209,14 @@ void UglyKnob::draw(VSTGUI::CDrawContext* c)
 
 UglySelector::UglySelector(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag,
                            std::vector<std::string> labels)
-: CControl(r,l,tag,nullptr),labels_(std::move(labels))
+: VSTGUI::CControl(r,l,tag,nullptr),labels_(std::move(labels))
 {
     setTransparency(true);
     setWantsFocus(true);
 }
 
 UglySelector::UglySelector(const UglySelector& o)
-: CControl(o),labels_(o.labels_) {}
+: VSTGUI::CControl(o),labels_(o.labels_) {}
 
 void UglySelector::draw(VSTGUI::CDrawContext* c)
 {
