@@ -21,7 +21,7 @@ void UglyFaceplate::draw(VSTGUI::CDrawContext* c){
     screw(c,r.left+16,r.top+16); screw(c,r.right-16,r.top+16); screw(c,r.left+16,r.bottom-16); screw(c,r.right-16,r.bottom-16);
     setDirty(false);
 }
-UglyKnob::UglyKnob(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag):CKnob(r,l,tag,nullptr){
+UglyKnob::UglyKnob(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag):CKnob(r,l,tag,nullptr,nullptr){
     setStartAngle((float)(135*pi/180)); setRangeAngle((float)(270*pi/180)); setTransparency(true); setWantsFocus(true);
 }
 UglyKnob::UglyKnob(const UglyKnob& o):CKnob(o){}
