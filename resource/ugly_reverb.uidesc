@@ -87,7 +87,7 @@
     <view class="CView" custom-view-name="Output" origin="657, 243" size="60, 60"/>
     <view back-color="Display" class="CParamDisplay" control-tag="Output" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="657, 308" size="60, 20" transparent="false" text-alignment="center"/>
 
-    <view back-color="Display" class="CTextLabel" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="24, 360" size="712, 42" title="UGLY REVERB   //   CONTROLLED WRONGNESS   //   125A" transparent="false" text-alignment="center"/>
+    <view back-color="Display" class="CTextLabel" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="24, 360" size="712, 42" title="OLD DIGITAL REVERB   //   CONTROLLED WRONGNESS" transparent="false" text-alignment="center"/>
   </template>
   <control-tags>
     <control-tag name="Material" tag="100"/>
