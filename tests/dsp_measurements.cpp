@@ -379,7 +379,7 @@ int main()
         p.setTestParameter(UglyReverb::kMix, 0.67f);
         require(p.getState(&state)==kResultOk, "State serialization succeeds", failures);
         state.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
-        Steinberg::IBStreamer stateReader(&state, Steinberg::kLittleEndian);
+        Steinberg::IBStreamer stateReader(&state, kLittleEndian);
         Steinberg::int32 stateMagic=0, stateVersion=0;
         require(stateReader.readInt32(stateMagic) && stateMagic==UglyReverb::kComponentStateMagic,
                 "State serialization writes component magic", failures);
@@ -395,7 +395,7 @@ int main()
 
         // Legacy pre-version state (14 floats + bypass) must remain loadable.
         Steinberg::MemoryStream legacyState;
-        Steinberg::IBStreamer legacyWriter(&legacyState, Steinberg::kLittleEndian);
+        Steinberg::IBStreamer legacyWriter(&legacyState, kLittleEndian);
         const float legacyValues[UglyReverb::kComponentStateValueCount] = {
             1.0f,0.55f,0.93f,0.08f,0.45f,0.48f,0.81f,0.55f,
             0.12f,0.55f,0.75f,0.67f,0.5f,0.0f
