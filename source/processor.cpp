@@ -112,7 +112,9 @@ tresult PLUGIN_API Processor::setBusArrangements(SpeakerArrangement* inputs, int
 
 void Processor::resetDsp()
 {
-    const int maxComb = (int)(sampleRate_ * 0.18) + 32;
+    // Tank at maximum Size/Body can exceed 180 ms.  Keep enough headroom so
+    // material tuning is never silently clamped by the delay-line capacity.
+    const int maxComb = (int)(sampleRate_ * 0.35) + 32;
     const int maxAp = (int)(sampleRate_ * 0.045) + 32;
     for (auto& x : combL_) x.resize(maxComb);
     for (auto& x : combR_) x.resize(maxComb);
@@ -363,11 +365,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         float apOutL = combSumL;
         float apOutR = combSumR;
 
-        // DIFFUSION controls echo density, not metallic resonance.  The allpass
-        // feedback is now mostly a material/METAL property; Diffusion progressively
-        // blends in each serial stage instead of making the stages ring harder.
-        const float apFeedback = std::min(0.76f,
-            0.42f + smMetal_ * 0.12f + diffusionBias[mat] * 0.35f);
+        // DIFFUSION's main job is echo density: it progressively blends in the
+        // serial stages.  A smaller secondary feedback contribution deliberately
+        // preserves the musical "metalizer" interaction discovered by ear.
+        const float apFeedback = std::min(0.78f,
+            0.42f + smMetal_ * 0.12f + smDiffusion_ * 0.10f
+            + diffusionBias[mat] * 0.35f);
         for (int i = 0; i < kAllpasses; ++i)
         {
             const float uglyScale = 1.f - smMetal_ * (0.10f + 0.035f * i);
@@ -399,8 +402,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         wetR *= characterGain;
 
         // Calibrate the deliberately hot character core to a usable insert-mix range.
-        // With the squared Mix law, 20% knob = 4% internal wet.  A 0.05 core trim
-        // moves the previously obvious ~0.2% wet region to roughly that 20% area.
+        // With the squared Mix law, low settings remain fine-grained while the
+        // reverb still becomes clearly audible in the normal 10-20% control region.
         constexpr float kWetCalibration = 0.125f; // ~ -18.1 dB
         wetL *= kWetCalibration;
         wetR *= kWetCalibration;
