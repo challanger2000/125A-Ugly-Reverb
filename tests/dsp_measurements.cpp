@@ -196,18 +196,25 @@ int main()
         require(energy(delayed.left,0,first70) < 1e-12,
                 "Pre-delay prevents premature wet output", failures);
 
-        const float materialValues[] = {0.f,0.2f,0.4f,0.6f,0.8f,1.f};
-        const char* materialNames[] = {"Plate","Thin Plate","Heavy Plate","Steel","Chamber","Tank"};
+        const float materialValues[] = {0.f,0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.7f,0.8f,0.9f,1.f};
+        const char* materialNames[] = {"Plate","Thin Plate","Heavy Plate","Sheet","Spring","Steel",
+                                       "Pipe","Metal Drum","Oil Can","Chamber","Tank"};
         std::vector<RenderResult> materials;
         for (float m : materialValues) materials.push_back(render(48000.0,1.5,m,0.f,0.f));
-        for (int i=0;i<5;++i)
+        for (int i=0;i<10;++i)
             require(difference(materials[i].left,materials[i+1].left) > 1e-5,
                     std::string(materialNames[i])+" differs from "+materialNames[i+1], failures);
 
-        // Legacy normalized material positions remain semantically compatible.
+        // Legacy anchors remain exact after expanding the stepped Material parameter.
+        auto legacyPlate=render(48000.0,1.5,0.f,0.f,0.f);
         auto legacySteel=render(48000.0,1.5,0.5f,0.f,0.f);
-        require(difference(legacySteel.left,materials[3].left) < 1e-7,
+        auto legacyTank=render(48000.0,1.5,1.f,0.f,0.f);
+        require(difference(legacyPlate.left,materials[0].left) < 1e-7,
+                "Legacy Material 0.0 still resolves to Plate", failures);
+        require(difference(legacySteel.left,materials[5].left) < 1e-7,
                 "Legacy Material 0.5 still resolves to Steel", failures);
+        require(difference(legacyTank.left,materials[10].left) < 1e-7,
+                "Legacy Material 1.0 still resolves to Tank", failures);
 
         auto shortDecay=render(48000.0,3.0,0.5f,0.f,0.f,false,true,128,0.15f);
         auto longDecay=render(48000.0,3.0,0.5f,0.f,0.f,false,true,128,0.90f);
@@ -277,7 +284,7 @@ int main()
         require(bypass.left[0]==1.f && bypass.right[0]==1.f, "Bypass passes input sample exactly", failures);
         require(energy(bypass.left,1,bypass.left.size())==0.0, "Bypass adds no output tail", failures);
 
-        for (float material : {0.f, 0.2f, 0.4f, 0.6f, 0.8f, 1.f})
+        for (float material : {0.f,0.1f,0.2f,0.3f,0.4f,0.5f,0.6f,0.7f,0.8f,0.9f,1.f})
         {
             auto extreme = render(96000.0, 6.0, material, 1.f, 1.f, false, true, 128,
                                   1.f, 1.f, 1.f, 0.f, 1.f, 0.55f, 0.55f);
