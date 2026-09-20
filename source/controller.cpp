@@ -1,6 +1,7 @@
 #include "controller.h"
 #include "parameters.h"
 #include "base/source/fstreamer.h"
+#include "public.sdk/source/vst/vstparameters.h"
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -12,22 +13,44 @@ tresult PLUGIN_API Controller::initialize(FUnknown* context)
     auto r = EditControllerEx1::initialize(context);
     if (r != kResultOk) return r;
 
-    parameters.addParameter(STR16("Material"), nullptr, 10, 0.0, ParameterInfo::kCanAutomate, kMaterial);
-    parameters.addParameter(STR16("Size"), nullptr, 0, 0.55, ParameterInfo::kCanAutomate, kSize);
-    parameters.addParameter(STR16("Decay"), nullptr, 0, 0.58, ParameterInfo::kCanAutomate, kDecay);
-    parameters.addParameter(STR16("Pre-Delay"), nullptr, 0, 0.08, ParameterInfo::kCanAutomate, kPreDelay);
-    parameters.addParameter(STR16("Diffusion"), nullptr, 0, 0.45, ParameterInfo::kCanAutomate, kDiffusion);
-    parameters.addParameter(STR16("Damping"), nullptr, 0, 0.48, ParameterInfo::kCanAutomate, kDamping);
-    parameters.addParameter(STR16("Metal"), nullptr, 0, 0.68, ParameterInfo::kCanAutomate, kMetal);
-    parameters.addParameter(STR16("Clang"), nullptr, 0, 0.55, ParameterInfo::kCanAutomate, kClang);
-    parameters.addParameter(STR16("Rattle"), nullptr, 0, 0.12, ParameterInfo::kCanAutomate, kRattle);
-    parameters.addParameter(STR16("Body"), nullptr, 0, 0.55, ParameterInfo::kCanAutomate, kBody);
-    parameters.addParameter(STR16("Width"), nullptr, 0, 0.75, ParameterInfo::kCanAutomate, kWidth);
-    parameters.addParameter(STR16("Mix"), nullptr, 0, 0.28, ParameterInfo::kCanAutomate, kMix);
-    parameters.addParameter(STR16("Output"), STR16("dB"), 0, 0.5, ParameterInfo::kCanAutomate, kOutput);
-    parameters.addParameter(STR16("Digital Color"), nullptr, 2, 0.0, ParameterInfo::kCanAutomate, kDigital);
-    parameters.addParameter(STR16("Bypass"), nullptr, 1, 0.0,
-                            ParameterInfo::kCanAutomate | ParameterInfo::kIsBypass, kBypass);
+    auto* material = new StringListParameter(STR16("Material"), kMaterial);
+    material->appendString(STR16("Plate"));
+    material->appendString(STR16("Thin Plate"));
+    material->appendString(STR16("Heavy Plate"));
+    material->appendString(STR16("Sheet"));
+    material->appendString(STR16("Spring"));
+    material->appendString(STR16("Steel"));
+    material->appendString(STR16("Pipe"));
+    material->appendString(STR16("Metal Drum"));
+    material->appendString(STR16("Oil Can"));
+    material->appendString(STR16("Chamber"));
+    material->appendString(STR16("Tank"));
+    parameters.addParameter(material);
+
+    parameters.addParameter(new RangeParameter(STR16("Size"), kSize, STR16("%"), 0.0, 100.0, 55.0));
+    parameters.addParameter(new RangeParameter(STR16("Decay"), kDecay, STR16("%"), 0.0, 100.0, 58.0));
+    parameters.addParameter(new RangeParameter(STR16("Pre-Delay"), kPreDelay, STR16("ms"), 0.0, 180.0, 14.4));
+    parameters.addParameter(new RangeParameter(STR16("Diffusion"), kDiffusion, STR16("%"), 0.0, 100.0, 45.0));
+    parameters.addParameter(new RangeParameter(STR16("Damping"), kDamping, STR16("%"), 0.0, 100.0, 48.0));
+    parameters.addParameter(new RangeParameter(STR16("Metal"), kMetal, STR16("%"), 0.0, 100.0, 68.0));
+    parameters.addParameter(new RangeParameter(STR16("Clang"), kClang, STR16("%"), 0.0, 100.0, 55.0));
+    parameters.addParameter(new RangeParameter(STR16("Rattle"), kRattle, STR16("%"), 0.0, 100.0, 12.0));
+    parameters.addParameter(new RangeParameter(STR16("Body"), kBody, STR16("%"), 0.0, 100.0, 55.0));
+    parameters.addParameter(new RangeParameter(STR16("Width"), kWidth, STR16("%"), 0.0, 100.0, 75.0));
+    parameters.addParameter(new RangeParameter(STR16("Mix"), kMix, STR16("%"), 0.0, 100.0, 28.0));
+    parameters.addParameter(new RangeParameter(STR16("Output"), kOutput, STR16("dB"), -12.0, 12.0, 0.0));
+
+    auto* digital = new StringListParameter(STR16("Digital Color"), kDigital);
+    digital->appendString(STR16("Clean"));
+    digital->appendString(STR16("12-bit"));
+    digital->appendString(STR16("8-bit"));
+    parameters.addParameter(digital);
+
+    auto* bypass = new StringListParameter(STR16("Bypass"), kBypass, nullptr,
+        ParameterInfo::kCanAutomate | ParameterInfo::kIsBypass | ParameterInfo::kIsList);
+    bypass->appendString(STR16("Off"));
+    bypass->appendString(STR16("On"));
+    parameters.addParameter(bypass);
     return kResultOk;
 }
 
