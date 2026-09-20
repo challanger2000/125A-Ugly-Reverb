@@ -2,12 +2,14 @@
 #include "controller.h"
 #include "ids.h"
 #include "parameters.h"
+#include "state_format.h"
 
 #include "base/source/fstreamer.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -98,11 +100,25 @@ tresult PLUGIN_API Processor::setActive(TBool state)
 
 tresult PLUGIN_API Processor::setProcessing(TBool state)
 {
-    // AudioEffect::setProcessing() returns kNotImplemented by default.
-    // This processor supports the standard start/stop processing transition,
-    // so acknowledge it explicitly while still letting the base class observe it.
+    // Hosts may restart processing without another setActive() transition.
+    // Clear existing buffers without reallocating: setProcessing() may be called
+    // from the realtime thread.
+    if (state)
+        clearDsp();
+
     AudioEffect::setProcessing(state);
     return kResultTrue;
+}
+
+uint32 PLUGIN_API Processor::getTailSamples()
+{
+    // The maximum RT60 of the character network is below 15 seconds.
+    // Report a conservative 20-second tail so hosts/offline renderers do not
+    // truncate the reverb while still returning a finite value.
+    constexpr double kReportedTailSeconds = 20.0;
+    const double samples = std::ceil(sampleRate_ * kReportedTailSeconds);
+    return static_cast<uint32>(std::min<double>(
+        samples, static_cast<double>(std::numeric_limits<uint32>::max())));
 }
 
 tresult PLUGIN_API Processor::canProcessSampleSize(int32 symbolicSampleSize)
@@ -121,7 +137,7 @@ tresult PLUGIN_API Processor::setBusArrangements(SpeakerArrangement* inputs, int
 
 void Processor::resetDsp()
 {
-    // Tank at maximum Size/Body can exceed 180 ms.  Keep enough headroom so
+    // Tank at maximum Size/Body can exceed 180 ms. Keep enough headroom so
     // material tuning is never silently clamped by the delay-line capacity.
     const int maxComb = (int)(sampleRate_ * 0.35) + 32;
     const int maxAp = (int)(sampleRate_ * 0.045) + 32;
@@ -133,6 +149,18 @@ void Processor::resetDsp()
     const int maxPre = (int)(sampleRate_ * 0.25) + 16;
     preL_.assign(maxPre, 0.f);
     preR_.assign(maxPre, 0.f);
+
+    clearDsp();
+}
+
+void Processor::clearDsp()
+{
+    for (auto& x : combL_) x.clear();
+    for (auto& x : combR_) x.clear();
+    for (auto& x : apL_) x.clear();
+    for (auto& x : apR_) x.clear();
+    std::fill(preL_.begin(), preL_.end(), 0.f);
+    std::fill(preR_.begin(), preR_.end(), 0.f);
     preWrite_ = 0;
 
     for (int i = 0; i < kCombs; ++i)
@@ -231,10 +259,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         }
     }
 
-    // Parameter-only process calls are valid VST3 host behaviour.  Even with
-    // zero audio samples, consume queued values so processor/controller state
-    // remains synchronized.
-    if (data.numSamples <= 0)
+    const auto consumeRemainingParameterPoints = [&]()
     {
         for (int32 qIndex = 0; qIndex < activeQueues; ++qIndex)
         {
@@ -252,11 +277,23 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 }
             }
         }
+    };
+
+    // Parameter-only process calls are valid VST3 host behaviour.  Even with
+    // zero audio samples, consume queued values so processor/controller state
+    // remains synchronized.
+    if (data.numSamples <= 0)
+    {
+        consumeRemainingParameterPoints();
         return kResultOk;
     }
 
     if (data.numInputs < 1 || data.numOutputs < 1)
+    {
+        // Parameter-only positive-length blocks still need to update processor state.
+        consumeRemainingParameterPoints();
         return kResultOk;
+    }
     if (data.symbolicSampleSize != kSample32)
         return kResultFalse;
 
@@ -347,9 +384,6 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
     static constexpr float intrinsicMotion[kMaterials]= {0.f,0.f,0.f,0.00010f,0.00075f,0.f,0.00008f,0.00012f,0.00110f,0.00010f,0.f};
     static constexpr float motionRate[kMaterials]    = {1.f,1.f,1.f,1.7f,3.4f,1.f,1.3f,1.1f,0.55f,0.8f,1.f};
 
-    const int mat = std::max(0, std::min(kMaterials - 1,
-        (int)std::lround(material_ * (float)(kMaterials - 1))));
-
     for (int32 s = 0; s < data.numSamples; ++s)
     {
         // Apply every automation point whose sample offset has been reached.
@@ -374,6 +408,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 }
             }
         }
+
+        const int mat = std::max(0, std::min(kMaterials - 1,
+            (int)std::lround(material_ * (float)(kMaterials - 1))));
 
         const float xL = in[0][s];
         const float xR = in[1][s];
@@ -554,37 +591,27 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
     // A host may place a parameter point exactly at the block boundary.
     // It affects no sample in this block, but must become the target state for
     // the following block (and for processor/controller synchronization).
-    for (int32 qIndex = 0; qIndex < activeQueues; ++qIndex)
-    {
-        while (pointIndex[qIndex] < pointCount[qIndex])
-        {
-            applyParameter(paramQueues[qIndex]->getParameterId(),
-                           (float)nextValue[qIndex]);
-            ++pointIndex[qIndex];
-            if (pointIndex[qIndex] < pointCount[qIndex] &&
-                paramQueues[qIndex]->getPoint(pointIndex[qIndex],
-                                              nextOffset[qIndex],
-                                              nextValue[qIndex]) != kResultTrue)
-            {
-                pointIndex[qIndex] = pointCount[qIndex];
-            }
-        }
-    }
+    consumeRemainingParameterPoints();
 
     return kResultOk;
 }
 
 tresult PLUGIN_API Processor::setState(IBStream* state)
 {
+    if (!state) return kResultFalse;
     IBStreamer s(state, kLittleEndian);
-    float values[] = {material_, size_, decay_, preDelay_, diffusion_, damping_, metal_, clang_,
-                      rattle_, body_, width_, mix_, output_, digital_};
-    for (float& v : values) if (!s.readFloat(v)) return kResultFalse;
-    int32 bp = 0; if (!s.readInt32(bp)) return kResultFalse;
 
-    const ParamID ids[14] = {kMaterial,kSize,kDecay,kPreDelay,kDiffusion,kDamping,kMetal,kClang,
-                             kRattle,kBody,kWidth,kMix,kOutput,kDigital};
-    for (int i = 0; i < 14; ++i) applyParameter(ids[i], values[i]);
+    float values[kComponentStateValueCount] {};
+    int32 bp = 0;
+    if (!readComponentStatePayload(s, values, bp))
+        return kResultFalse;
+
+    const ParamID ids[kComponentStateValueCount] = {
+        kMaterial,kSize,kDecay,kPreDelay,kDiffusion,kDamping,kMetal,kClang,
+        kRattle,kBody,kWidth,kMix,kOutput,kDigital
+    };
+    for (int i = 0; i < kComponentStateValueCount; ++i)
+        applyParameter(ids[i], values[i]);
     bypass_ = bp != 0;
     resetSmoothers();
     return kResultOk;
@@ -592,12 +619,13 @@ tresult PLUGIN_API Processor::setState(IBStream* state)
 
 tresult PLUGIN_API Processor::getState(IBStream* state)
 {
+    if (!state) return kResultFalse;
     IBStreamer s(state, kLittleEndian);
-    const float values[] = {material_, size_, decay_, preDelay_, diffusion_, damping_, metal_, clang_,
-                            rattle_, body_, width_, mix_, output_, digital_};
-    for (float v : values) if (!s.writeFloat(v)) return kResultFalse;
-    if (!s.writeInt32(bypass_ ? 1 : 0)) return kResultFalse;
-    return kResultOk;
+    const float values[kComponentStateValueCount] = {
+        material_, size_, decay_, preDelay_, diffusion_, damping_, metal_, clang_,
+        rattle_, body_, width_, mix_, output_, digital_
+    };
+    return writeComponentStatePayload(s, values, bypass_ ? 1 : 0) ? kResultOk : kResultFalse;
 }
 
 } // namespace UglyReverb
