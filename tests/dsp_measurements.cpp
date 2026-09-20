@@ -167,6 +167,7 @@ RenderResult renderMaterialAutomationAtZero(double sr, double seconds, float mat
     setup.sampleRate = sr;
     if (p.setupProcessing(setup) != kResultOk)
         throw std::runtime_error("setupProcessing failed");
+    p.setTestParameter(UglyReverb::kPreDelay, 0.f);
     p.setTestParameter(UglyReverb::kMix, 1.f);
     p.setTestParameter(UglyReverb::kOutput, 0.5f);
     if (p.setActive(true) != kResultOk)
@@ -371,7 +372,7 @@ int main()
         stateSetup.sampleRate = 48000.0;
         p.setupProcessing(stateSetup);
         require(p.getLatencySamples()==0, "Reported latency is 0 samples", failures);
-        require(p.getTailSamples()==960000u, "Reported reverb tail is 20 seconds at 48 kHz", failures);
+        require(p.getTailSamples()==5760000u, "Reported reverb tail is 120 seconds at 48 kHz", failures);
 
         Steinberg::MemoryStream state;
         p.setTestParameter(UglyReverb::kDecay, 0.93f);
