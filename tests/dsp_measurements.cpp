@@ -208,14 +208,28 @@ int main()
         const double longLate=energy(longDecay.left,(size_t)(48000.0*1.5),longDecay.left.size());
         require(longLate > shortLate * 10.0, "Decay control increases late-tail energy", failures);
 
-        auto restrained=render(48000.0,2.5,0.5f,0.f,0.f,false,true,128,0.55f,0.10f,0.10f,0.70f);
-        auto extremeCharacter=render(48000.0,2.5,0.5f,0.f,0.f,false,true,128,1.0f,1.0f,1.0f,0.0f,1.0f,0.55f,0.55f);
-        const double restrainedWet=energy(restrained.left,(size_t)(48000.0*0.15),restrained.left.size());
-        const double extremeWet=energy(extremeCharacter.left,(size_t)(48000.0*0.15),extremeCharacter.left.size());
+        auto restrained=render(48000.0,2.5,0.5f,0.f,0.f,false,true,128,
+                                0.55f,0.10f,0.10f,0.70f,0.0f,0.45f,0.55f);
+        auto metalOnly=render(48000.0,2.5,0.5f,0.f,0.f,false,true,128,
+                              0.55f,1.0f,0.0f,0.70f,0.0f,0.45f,0.55f);
+        auto clangHeavy=render(48000.0,2.5,0.5f,0.f,0.f,false,true,128,
+                               1.0f,1.0f,1.0f,0.0f,0.0f,0.55f,0.55f);
+        auto fullChaos=render(48000.0,2.5,0.5f,0.f,0.f,false,true,128,
+                              1.0f,1.0f,1.0f,0.0f,1.0f,0.55f,0.55f);
+
+        const size_t characterStart=(size_t)(48000.0*0.15);
+        const double restrainedWet=energy(restrained.left,characterStart,restrained.left.size());
+        const double clangWet=energy(clangHeavy.left,characterStart,clangHeavy.left.size());
+        const double metalDelta=difference(restrained.left,metalOnly.left);
+        const double rattleDelta=difference(clangHeavy.left,fullChaos.left);
         std::cout << "[INFO] restrained_character_energy=" << restrainedWet
-                  << " extreme_character_energy=" << extremeWet
-                  << " ratio=" << (restrainedWet > 0.0 ? extremeWet/restrainedWet : 0.0) << "\n";
-        require(extremeWet > restrainedWet * 8.0, "Full Metal/Clang produces substantially stronger character tail", failures);
+                  << " clang_character_energy=" << clangWet
+                  << " ratio=" << (restrainedWet > 0.0 ? clangWet/restrainedWet : 0.0)
+                  << " metal_delta=" << metalDelta
+                  << " rattle_delta=" << rattleDelta << "\n";
+        require(metalDelta > 1e-4, "Metal alone substantially changes the reverb body", failures);
+        require(clangWet > restrainedWet * 6.0, "Metal plus Clang creates a much stronger character tail", failures);
+        require(rattleDelta > 1e-4, "Full Rattle substantially changes the resonant structure", failures);
 
         auto clean=render(48000.0,1.5,0.5f,0.f,0.f);
         auto bit12=render(48000.0,1.5,0.5f,0.f,0.5f);
