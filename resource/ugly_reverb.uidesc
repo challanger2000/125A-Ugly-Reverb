@@ -13,8 +13,10 @@
   <template background-color="Background" class="CViewContainer" maxSize="760, 430" minSize="760, 430" mouse-enabled="true" name="view" opacity="1" origin="0, 0" size="760, 430" transparent="false">
     <view class="CView" custom-view-name="Faceplate" origin="0, 0" size="760, 430" mouse-enabled="false"/>
     <view class="CView" custom-view-name="BrandLogo" origin="20, 9" size="86, 43" mouse-enabled="false"/>
-    <view back-color="Background" class="CTextLabel" font="~ NormalFontBig" font-color="Text" frame-width="0" origin="120, 10" size="300, 28" title="UGLY REVERB" transparent="true" text-alignment="left"/>
-    <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted" frame-width="0" origin="121, 36" size="330, 16" title="CHARACTER REVERB / CONTROLLED WRONGNESS" transparent="true" text-alignment="left"/>
+    <view back-color="Background" class="CTextLabel" font="~ NormalFontBig" font-color="Text" frame-width="0" origin="250, 9" size="260, 28" title="UGLY REVERB" transparent="true" text-alignment="center"/>
+    <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted" frame-width="0" origin="220, 36" size="320, 16" title="CHARACTER REVERB / CONTROLLED WRONGNESS" transparent="true" text-alignment="center"/>
+    <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted" frame-width="0" origin="644, 16" size="38, 18" title="GUI" transparent="true" text-alignment="right"/>
+    <view class="CView" custom-view-name="GuiZoom" origin="690, 12" size="52, 26"/>
 
     <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="PanelTitle" frame-width="0" origin="30, 80" size="220, 18" title="SPACE / MATERIAL" transparent="true" text-alignment="left"/>
     <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="PanelTitle" frame-width="0" origin="302, 80" size="290, 18" title="UGLY NETWORK" transparent="true" text-alignment="left"/>
@@ -55,20 +57,20 @@
     <view back-color="Display" class="CParamDisplay" control-tag="Width" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="528, 188" round-rect-radius="4" size="60, 19" style-round-rect="true" transparent="false" text-alignment="center"/>
 
     <!-- UGLY NETWORK BOTTOM -->
-    <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="290, 245" size="74, 17" title="Metal" transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Metal" origin="300, 268" size="54, 54"/>
-    <view back-color="Display" class="CParamDisplay" control-tag="Metal" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="297, 328" round-rect-radius="4" size="60, 19" style-round-rect="true" transparent="false" text-alignment="center"/>
+    <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="303, 245" size="74, 17" title="Metal" transparent="true" text-alignment="center"/>
+    <view class="CView" custom-view-name="Metal" origin="313, 268" size="54, 54"/>
+    <view back-color="Display" class="CParamDisplay" control-tag="Metal" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="310, 328" round-rect-radius="4" size="60, 19" style-round-rect="true" transparent="false" text-alignment="center"/>
 
-    <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="367, 245" size="74, 17" title="Clang" transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Clang" origin="377, 268" size="54, 54"/>
-    <view back-color="Display" class="CParamDisplay" control-tag="Clang" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="374, 328" round-rect-radius="4" size="60, 19" style-round-rect="true" transparent="false" text-alignment="center"/>
+    <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="404, 245" size="74, 17" title="Clang" transparent="true" text-alignment="center"/>
+    <view class="CView" custom-view-name="Clang" origin="414, 268" size="54, 54"/>
+    <view back-color="Display" class="CParamDisplay" control-tag="Clang" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="411, 328" round-rect-radius="4" size="60, 19" style-round-rect="true" transparent="false" text-alignment="center"/>
 
-    <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="444, 245" size="74, 17" title="Rattle" transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Rattle" origin="454, 268" size="54, 54"/>
-    <view back-color="Display" class="CParamDisplay" control-tag="Rattle" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="451, 328" round-rect-radius="4" size="60, 19" style-round-rect="true" transparent="false" text-alignment="center"/>
+    <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="505, 245" size="74, 17" title="Rattle" transparent="true" text-alignment="center"/>
+    <view class="CView" custom-view-name="Rattle" origin="515, 268" size="54, 54"/>
+    <view back-color="Display" class="CParamDisplay" control-tag="Rattle" font="~ NormalFontSmall" font-color="DisplayText" frame-color="Edge" frame-width="1" origin="512, 328" round-rect-radius="4" size="60, 19" style-round-rect="true" transparent="false" text-alignment="center"/>
 
-    <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="516, 245" size="84, 17" title="Digital Color" transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Digital" origin="521, 275" size="74, 34"/>
+    <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="367, 354" size="172, 16" title="Digital Color" transparent="true" text-alignment="center"/>
+    <view class="CView" custom-view-name="Digital" origin="360, 375" size="186, 28"/>
 
     <!-- MASTER -->
     <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Text" frame-width="0" origin="647, 105" size="78, 17" title="Mix" transparent="true" text-alignment="center"/>
