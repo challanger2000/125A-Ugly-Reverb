@@ -59,7 +59,8 @@ double difference(const std::vector<float>& a, const std::vector<float>& b)
 RenderResult render(double sr, double seconds, float material, float preDelay, float digital,
                     bool bypass=false, bool impulse=true, int block=128, float decay=0.58f,
                     float metal=0.68f, float clang=0.55f, float damping=0.48f,
-                    float rattle=0.12f, float diffusion=0.45f, float body=0.55f)
+                    float rattle=0.12f, float diffusion=0.45f, float body=0.55f,
+                    float mix=1.f)
 {
     block = std::max(1, block);
     Processor p;
@@ -86,7 +87,7 @@ RenderResult render(double sr, double seconds, float material, float preDelay, f
     p.setTestParameter(UglyReverb::kRattle, rattle);
     p.setTestParameter(UglyReverb::kDiffusion, diffusion);
     p.setTestParameter(UglyReverb::kBody, body);
-    p.setTestParameter(UglyReverb::kMix, bypass ? 0.28f : 1.f);
+    p.setTestParameter(UglyReverb::kMix, bypass ? 0.28f : mix);
     p.setTestParameter(UglyReverb::kOutput, 0.5f);
     p.setTestParameter(UglyReverb::kBypass, bypass ? 1.f : 0.f);
 
@@ -247,6 +248,27 @@ int main()
         require(clangDelta > 1e-4, "Clang substantially reshapes the metallic tail", failures);
         require(clangWet > restrainedWet * 1.5, "Metal plus Clang increases character-tail energy", failures);
         require(rattleDelta > 1e-4, "Full Rattle substantially changes the resonant structure", failures);
+
+        // MIX calibration: dry must be exact at zero, and reverb-tail energy
+        // must rise predictably through ordinary insert values.
+        auto mix0  = render(48000.0,2.0,0.f,0.f,0.f,false,true,128,0.58f,0.68f,0.55f,0.48f,0.12f,0.45f,0.55f,0.f);
+        auto mix10 = render(48000.0,2.0,0.f,0.f,0.f,false,true,128,0.58f,0.68f,0.55f,0.48f,0.12f,0.45f,0.55f,0.10f);
+        auto mix20 = render(48000.0,2.0,0.f,0.f,0.f,false,true,128,0.58f,0.68f,0.55f,0.48f,0.12f,0.45f,0.55f,0.20f);
+        auto mix50 = render(48000.0,2.0,0.f,0.f,0.f,false,true,128,0.58f,0.68f,0.55f,0.48f,0.12f,0.45f,0.55f,0.50f);
+        auto mix100= render(48000.0,2.0,0.f,0.f,0.f,false,true,128,0.58f,0.68f,0.55f,0.48f,0.12f,0.45f,0.55f,1.f);
+        const size_t mixTail=(size_t)(48000.0*0.08);
+        const double e0=energy(mix0.left,mixTail,mix0.left.size());
+        const double e10=energy(mix10.left,mixTail,mix10.left.size());
+        const double e20=energy(mix20.left,mixTail,mix20.left.size());
+        const double e50=energy(mix50.left,mixTail,mix50.left.size());
+        const double e100=energy(mix100.left,mixTail,mix100.left.size());
+        require(e0 < 1e-20, "Mix 0% produces no wet tail", failures);
+        require(e10 > e0 && e20 > e10 && e50 > e20 && e100 > e50,
+                "Mix wet-tail energy rises monotonically 0/10/20/50/100%", failures);
+        require(e20/e10 > 3.5 && e20/e10 < 4.5,
+                "Linear Mix law gives expected 20% vs 10% wet-tail ratio", failures);
+        require(e50/e20 > 5.5 && e50/e20 < 7.0,
+                "Linear Mix law gives expected 50% vs 20% wet-tail ratio", failures);
 
         auto clean=render(48000.0,1.5,0.5f,0.f,0.f);
         auto bit12=render(48000.0,1.5,0.5f,0.f,0.5f);
