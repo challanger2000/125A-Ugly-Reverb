@@ -310,7 +310,7 @@ void UglyToggle::draw(VSTGUI::CDrawContext* c)
             ? VSTGUI::CRect(4.716,91.062,698.528,784.875)
             : VSTGUI::CRect(147.0,85.0,847.0,785.0);
         VSTGUI::CRect dst=r;
-        dst.inset(2.0,1.0);
+        dst.inset(2.0,2.0);
         c->fillRectWithBitmap(bitmap,src,dst,1.f);
     }
     setDirty(false);
