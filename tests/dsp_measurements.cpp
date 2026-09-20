@@ -58,7 +58,8 @@ double difference(const std::vector<float>& a, const std::vector<float>& b)
 
 RenderResult render(double sr, double seconds, float material, float preDelay, float digital,
                     bool bypass=false, bool impulse=true, int block=128, float decay=0.58f,
-                    float metal=0.68f, float clang=0.55f, float damping=0.48f)
+                    float metal=0.68f, float clang=0.55f, float damping=0.48f,
+                    float rattle=0.12f, float diffusion=0.45f, float body=0.55f)
 {
     block = std::max(1, block);
     Processor p;
@@ -82,6 +83,9 @@ RenderResult render(double sr, double seconds, float material, float preDelay, f
     p.setTestParameter(UglyReverb::kMetal, metal);
     p.setTestParameter(UglyReverb::kClang, clang);
     p.setTestParameter(UglyReverb::kDamping, damping);
+    p.setTestParameter(UglyReverb::kRattle, rattle);
+    p.setTestParameter(UglyReverb::kDiffusion, diffusion);
+    p.setTestParameter(UglyReverb::kBody, body);
     p.setTestParameter(UglyReverb::kMix, bypass ? 0.28f : 1.f);
     p.setTestParameter(UglyReverb::kOutput, 0.5f);
     p.setTestParameter(UglyReverb::kBypass, bypass ? 1.f : 0.f);
@@ -205,7 +209,7 @@ int main()
         require(longLate > shortLate * 10.0, "Decay control increases late-tail energy", failures);
 
         auto restrained=render(48000.0,2.5,0.5f,0.f,0.f,false,true,128,0.55f,0.10f,0.10f,0.70f);
-        auto extremeCharacter=render(48000.0,2.5,0.5f,0.f,0.f,false,true,128,1.0f,1.0f,1.0f,0.0f);
+        auto extremeCharacter=render(48000.0,2.5,0.5f,0.f,0.f,false,true,128,1.0f,1.0f,1.0f,0.0f,1.0f,0.55f,0.55f);
         const double restrainedWet=energy(restrained.left,(size_t)(48000.0*0.15),restrained.left.size());
         const double extremeWet=energy(extremeCharacter.left,(size_t)(48000.0*0.15),extremeCharacter.left.size());
         std::cout << "[INFO] restrained_character_energy=" << restrainedWet
@@ -251,7 +255,8 @@ int main()
 
         for (float material : {0.f, 0.5f, 1.f})
         {
-            auto extreme = render(96000.0, 6.0, material, 1.f, 1.f);
+            auto extreme = render(96000.0, 6.0, material, 1.f, 1.f, false, true, 128,
+                                  1.f, 1.f, 1.f, 0.f, 1.f, 0.55f, 0.55f);
             require(finiteBuffer(extreme.left) && finiteBuffer(extreme.right),
                     "Extreme settings remain finite for material " + std::to_string(material), failures);
             float peak = 0.f;
