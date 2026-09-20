@@ -4,7 +4,7 @@ project(UglyReverb VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(SMTG_ENABLE_VSTGUI_SUPPORT OFF CACHE BOOL "" FORCE)
+set(SMTG_ENABLE_VSTGUI_SUPPORT ON CACHE BOOL "" FORCE)
 set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES ON CACHE BOOL "" FORCE)
 
@@ -28,9 +28,18 @@ smtg_add_vst3plugin(UglyReverb
   source/controller.h
   source/controller.cpp
   source/entry.cpp
+  resource/ugly_reverb.uidesc
 )
 
-target_link_libraries(UglyReverb PRIVATE sdk)
+target_link_libraries(UglyReverb PRIVATE sdk vstgui_support)
+
+smtg_target_add_plugin_resources(UglyReverb
+  RESOURCES
+    resource/ugly_reverb.uidesc
+    resource/ugly_reverb_knob_master.png
+    resource/ugly_reverb_toggle_off.png
+    resource/ugly_reverb_toggle_on.png
+)
 
 smtg_target_configure_version_file(UglyReverb)
 
