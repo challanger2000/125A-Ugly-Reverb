@@ -216,41 +216,62 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
     const float smoothCoef = 1.f - std::exp(-1.f / std::max(1.f, 0.012f * (float)sampleRate_));
 
-    // Six deliberately non-modern material networks.  The old normalized points
-    // remain meaningful: 0.0 = Plate, 0.5 = Steel, 1.0 = Tank.
-    // New discrete positions are Plate / Thin Plate / Heavy Plate / Steel / Chamber / Tank.
-    static constexpr int kMaterials = 6;
+    // Eleven deliberately non-modern material networks.  Normalized legacy
+    // anchors remain stable: 0.0 = Plate, 0.5 = Steel, 1.0 = Tank.
+    // Plate / Thin Plate / Heavy Plate / Sheet / Spring / Steel /
+    // Pipe / Metal Drum / Oil Can / Chamber / Tank.
+    static constexpr int kMaterials = 11;
     static constexpr float baseMs[kMaterials][kCombs] = {
-        {23.1f, 27.8f, 31.7f, 36.4f, 41.9f, 47.3f, 53.6f, 61.2f},   // Plate
-        {14.8f, 18.1f, 21.7f, 26.4f, 31.2f, 37.9f, 45.6f, 55.1f},   // Thin Plate
-        {28.4f, 33.9f, 39.6f, 46.8f, 55.3f, 65.1f, 76.7f, 90.4f},   // Heavy Plate
-        {17.8f, 22.6f, 28.3f, 34.7f, 42.1f, 51.8f, 63.4f, 78.6f},   // Steel
-        {20.6f, 26.9f, 34.1f, 43.8f, 55.7f, 69.4f, 86.2f, 107.5f},  // Chamber
-        {31.6f, 39.3f, 48.7f, 59.8f, 73.1f, 88.4f,104.7f,126.3f}    // Tank
+        {23.1f,27.8f,31.7f,36.4f,41.9f,47.3f,53.6f,61.2f},   // Plate
+        {14.8f,18.1f,21.7f,26.4f,31.2f,37.9f,45.6f,55.1f},   // Thin Plate
+        {28.4f,33.9f,39.6f,46.8f,55.3f,65.1f,76.7f,90.4f},   // Heavy Plate
+        {10.9f,13.7f,17.2f,21.8f,27.6f,35.1f,44.7f,57.2f},   // Sheet
+        {12.4f,15.9f,20.8f,27.5f,36.2f,47.6f,62.8f,83.1f},   // Spring
+        {17.8f,22.6f,28.3f,34.7f,42.1f,51.8f,63.4f,78.6f},   // Steel
+        {18.6f,24.8f,33.2f,44.7f,60.1f,80.9f,108.7f,145.3f}, // Pipe
+        {24.7f,31.8f,40.9f,52.6f,67.8f,86.7f,109.8f,137.4f}, // Metal Drum
+        {16.1f,21.4f,28.9f,39.2f,53.1f,71.6f,96.4f,129.8f},  // Oil Can
+        {20.6f,26.9f,34.1f,43.8f,55.7f,69.4f,86.2f,107.5f},  // Chamber
+        {31.6f,39.3f,48.7f,59.8f,73.1f,88.4f,104.7f,126.3f}  // Tank
     };
     static constexpr float uglyMs[kMaterials][kCombs] = {
-        {7.3f,  9.8f, 12.7f, 16.9f, 22.4f, 29.1f, 37.8f, 49.6f},
-        {4.2f,  5.9f,  8.1f, 11.2f, 15.6f, 21.8f, 30.4f, 42.7f},
-        {8.6f, 11.9f, 15.8f, 21.3f, 28.7f, 38.5f, 51.4f, 68.2f},
-        {5.9f,  8.4f, 11.6f, 15.7f, 21.3f, 28.9f, 39.4f, 54.1f},
-        {6.8f,  9.6f, 13.7f, 19.4f, 27.2f, 38.1f, 53.6f, 74.9f},
-        {9.1f, 12.8f, 17.6f, 24.3f, 33.7f, 46.2f, 63.9f, 86.7f}
+        {7.3f,9.8f,12.7f,16.9f,22.4f,29.1f,37.8f,49.6f},
+        {4.2f,5.9f,8.1f,11.2f,15.6f,21.8f,30.4f,42.7f},
+        {8.6f,11.9f,15.8f,21.3f,28.7f,38.5f,51.4f,68.2f},
+        {3.7f,5.1f,7.3f,10.4f,14.9f,21.5f,31.2f,45.8f},
+        {4.8f,6.9f,9.7f,13.6f,19.4f,28.1f,40.7f,59.2f},
+        {5.9f,8.4f,11.6f,15.7f,21.3f,28.9f,39.4f,54.1f},
+        {5.4f,8.0f,12.1f,18.2f,27.3f,41.0f,61.7f,92.6f},
+        {7.2f,10.4f,15.0f,21.7f,31.4f,45.6f,66.2f,96.1f},
+        {5.1f,7.6f,11.4f,17.0f,25.5f,38.3f,57.6f,86.4f},
+        {6.8f,9.6f,13.7f,19.4f,27.2f,38.1f,53.6f,74.9f},
+        {9.1f,12.8f,17.6f,24.3f,33.7f,46.2f,63.9f,86.7f}
     };
     static constexpr float apMs[kMaterials][kAllpasses] = {
-        {4.7f, 7.1f,10.9f,15.8f},
-        {2.9f, 4.6f, 7.4f,11.2f},
-        {5.3f, 8.0f,12.1f,17.3f},
-        {3.8f, 6.2f, 9.6f,14.1f},
-        {4.2f, 6.9f,10.8f,16.4f},
-        {5.9f, 8.7f,13.2f,18.6f}
+        {4.7f,7.1f,10.9f,15.8f},
+        {2.9f,4.6f,7.4f,11.2f},
+        {5.3f,8.0f,12.1f,17.3f},
+        {2.4f,3.9f,6.1f,9.4f},
+        {3.1f,5.3f,8.8f,14.6f},
+        {3.8f,6.2f,9.6f,14.1f},
+        {3.5f,5.8f,9.9f,17.1f},
+        {4.6f,7.7f,12.7f,19.3f},
+        {3.7f,6.4f,10.6f,17.8f},
+        {4.2f,6.9f,10.8f,16.4f},
+        {5.9f,8.7f,13.2f,18.6f}
     };
 
-    // Each material has a distinct resonant fingerprint rather than a simple EQ/gain change.
+    // Distinct modal fingerprints; these are intentionally not just EQ/gain presets.
     static constexpr float clangShape[kMaterials][kCombs] = {
         {0.42f,0.74f,0.18f,0.66f,0.82f,0.28f,0.71f,0.12f},
         {0.68f,0.92f,0.31f,0.83f,1.00f,0.42f,0.88f,0.22f},
         {0.35f,0.79f,0.11f,0.72f,0.86f,0.24f,0.76f,0.08f},
+        {0.76f,1.00f,0.52f,0.91f,0.84f,0.63f,0.95f,0.38f},
+        {0.31f,1.00f,0.08f,0.88f,0.44f,0.94f,0.19f,0.79f},
         {0.08f,1.00f,-0.16f,0.72f,1.00f,0.03f,0.91f,-0.12f},
+        {1.00f,0.18f,0.82f,-0.06f,0.91f,0.12f,0.74f,-0.10f},
+        {0.24f,0.93f,0.06f,1.00f,0.41f,0.84f,0.68f,0.29f},
+        {0.16f,0.86f,-0.04f,0.69f,1.00f,0.21f,0.78f,0.05f},
         {0.18f,0.87f,-0.05f,0.94f,0.49f,0.21f,1.00f,0.02f},
         {0.22f,0.81f,-0.08f,1.00f,0.58f,0.18f,0.97f,0.05f}
     };
@@ -258,15 +279,22 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         {0.92f,0.88f,0.96f,0.90f,0.94f,0.89f,0.93f,0.91f},
         {0.96f,1.02f,0.90f,1.05f,0.93f,1.01f,0.89f,0.98f},
         {0.88f,0.95f,1.02f,0.91f,1.00f,0.94f,0.97f,0.90f},
+        {1.05f,0.91f,1.08f,0.87f,1.02f,0.89f,1.04f,0.85f},
+        {0.72f,1.16f,0.69f,1.08f,0.76f,1.12f,0.71f,1.03f},
         {0.62f,1.16f,0.58f,0.96f,1.22f,0.66f,1.08f,0.61f},
+        {1.18f,0.61f,1.09f,0.56f,1.15f,0.63f,1.02f,0.59f},
+        {0.74f,1.08f,0.82f,1.14f,0.71f,1.01f,0.94f,0.79f},
+        {0.81f,1.07f,0.70f,0.98f,1.13f,0.76f,1.02f,0.73f},
         {0.70f,1.05f,0.72f,1.11f,0.78f,0.97f,1.14f,0.69f},
         {0.78f,1.02f,0.70f,1.12f,0.76f,0.94f,1.18f,0.72f}
     };
-    static constexpr float rt60Scale[kMaterials]      = {0.92f,0.80f,1.08f,1.00f,1.10f,1.18f};
-    static constexpr float diffusionBias[kMaterials]  = {0.10f,0.14f,0.08f,-0.05f,0.00f,-0.10f};
-    static constexpr float rawLeakScale[kMaterials]   = {0.72f,0.82f,0.68f,1.18f,0.96f,1.06f};
-    static constexpr float materialGain[kMaterials]   = {1.00f,1.02f,1.04f,1.14f,1.08f,1.08f};
-    static constexpr float clangDepth[kMaterials]     = {0.050f,0.060f,0.052f,0.074f,0.064f,0.066f};
+    static constexpr float rt60Scale[kMaterials]     = {0.92f,0.80f,1.08f,0.76f,0.96f,1.00f,1.05f,1.12f,1.02f,1.10f,1.18f};
+    static constexpr float diffusionBias[kMaterials] = {0.10f,0.14f,0.08f,0.16f,0.06f,-0.05f,-0.08f,-0.02f,0.03f,0.00f,-0.10f};
+    static constexpr float rawLeakScale[kMaterials]  = {0.72f,0.82f,0.68f,0.90f,0.96f,1.18f,1.20f,1.08f,1.02f,0.96f,1.06f};
+    static constexpr float materialGain[kMaterials]  = {1.00f,1.02f,1.04f,1.05f,1.06f,1.14f,1.10f,1.08f,1.06f,1.08f,1.08f};
+    static constexpr float clangDepth[kMaterials]    = {0.050f,0.060f,0.052f,0.064f,0.070f,0.074f,0.078f,0.068f,0.066f,0.064f,0.066f};
+    static constexpr float intrinsicMotion[kMaterials]= {0.f,0.f,0.f,0.00010f,0.00075f,0.f,0.00008f,0.00012f,0.00110f,0.00010f,0.f};
+    static constexpr float motionRate[kMaterials]    = {1.f,1.f,1.f,1.7f,3.4f,1.f,1.3f,1.1f,0.55f,0.8f,1.f};
 
     const int mat = std::max(0, std::min(kMaterials - 1,
         (int)std::lround(material_ * (float)(kMaterials - 1))));
@@ -336,9 +364,15 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
             // Rattle deliberately affects only a few paths strongly, like loose hardware.
             const float rattleMask = (i == 1 || i == 4 || i == 6) ? 1.f : 0.25f;
-            const float jitter = smRattle_ * rattleMask * 0.0035f * (float)sampleRate_
-                               * (std::sin(rattlePhase_[i]) + 0.31f * std::sin(rattlePhase_[i] * 2.7f + i));
-            const float delayL = ms * 0.001f * (float)sampleRate_ + jitter;
+            const float phase = rattlePhase_[i];
+            const float rattleJitter = smRattle_ * rattleMask * 0.0035f * (float)sampleRate_
+                               * (std::sin(phase) + 0.31f * std::sin(phase * 2.7f + i));
+            // Spring and Oil Can carry a small intrinsic mechanical motion even with
+            // Rattle at zero; Rattle remains the dominant user-controlled instability.
+            const float materialMotion = intrinsicMotion[mat] * (float)sampleRate_
+                               * (std::sin(phase * motionRate[mat] + 0.37f * i)
+                               + 0.23f * std::sin(phase * motionRate[mat] * 2.31f + i));
+            const float delayL = ms * 0.001f * (float)sampleRate_ + rattleJitter + materialMotion;
             const float delayR = delayL + (17.f + 3.f * (float)i);
 
             float yL = combL_[i].read(delayL);
