@@ -1,1 +1,0 @@
-Verify CLEAN / 12 BIT / 8 BIT clickable selector.
