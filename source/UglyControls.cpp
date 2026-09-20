@@ -182,6 +182,22 @@ void warningStencil(VSTGUI::CDrawContext* c,const VSTGUI::CRect& r)
 }
 
 
+VSTGUI::CBitmap* createMultiResolutionBitmap(const std::string& resourceName)
+{
+    auto* bitmap=new VSTGUI::CBitmap(VSTGUI::CResourceDescription(resourceName.c_str()));
+    const auto dot=resourceName.rfind(".png");
+    if(dot!=std::string::npos) {
+        const std::string hiName=resourceName.substr(0,dot)+"#2.0x.png";
+        VSTGUI::CBitmap hiBitmap(VSTGUI::CResourceDescription(hiName.c_str()));
+        if(auto hiPlatform=hiBitmap.getPlatformBitmap()) {
+            hiPlatform->setScaleFactor(2.0);
+            bitmap->addBitmap(hiPlatform);
+        }
+    }
+    return bitmap;
+}
+
+
 } // namespace
 
 UglyFaceplate::UglyFaceplate(const VSTGUI::CRect& r):VSTGUI::CView(r)
@@ -232,7 +248,7 @@ UglyTextureOverlay::UglyTextureOverlay(const VSTGUI::CRect& r,const char* resour
 {
     setMouseEnabled(false);
     setTransparency(true);
-    bitmap_=new VSTGUI::CBitmap(VSTGUI::CResourceDescription(resourceName_.c_str()));
+    bitmap_=createMultiResolutionBitmap(resourceName_);
 }
 
 UglyTextureOverlay::UglyTextureOverlay(const UglyTextureOverlay& o)
