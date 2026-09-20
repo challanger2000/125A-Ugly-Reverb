@@ -1,6 +1,8 @@
 #pragma once
 #include "public.sdk/source/vst/vsteditcontroller.h"
-#include "vstgui/uidescription/iviewcreator.h"
+#include "vstgui/plugin-bindings/vst3editor.h"
+#include "vstgui/uidescription/uidescription.h"
+#include "vstgui/uidescription/uiattributes.h"
 
 namespace UglyReverb {
 
