@@ -61,6 +61,15 @@ smtg_add_vst3plugin(UglyReverb
 target_link_libraries(UglyReverb PRIVATE sdk vstgui_support)
 target_include_directories(UglyReverb PRIVATE "${CMAKE_BINARY_DIR}")
 
+if(SMTG_WIN)
+  configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/resource/ugly_reverb_resources.rc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/ugly_reverb_resources.rc"
+    @ONLY
+  )
+  target_sources(UglyReverb PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/ugly_reverb_resources.rc")
+endif()
+
 smtg_target_add_plugin_resources(UglyReverb
   RESOURCES
     resource/ugly_reverb.uidesc
