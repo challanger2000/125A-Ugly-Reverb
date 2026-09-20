@@ -22,7 +22,7 @@ constexpr double kGuiZoomFactors[] {1.0, 1.25, 1.5, 1.75, 2.0};
 
 tresult PLUGIN_API Controller::initialize(FUnknown* context)
 {
-    auto r = EditControllerEx1::initialize(context);
+    auto r = EditController::initialize(context);
     if (r != kResultOk) return r;
 
     auto* material = new StringListParameter(STR16("Material"), kMaterial);
