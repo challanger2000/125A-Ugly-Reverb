@@ -1,8 +1,7 @@
 #pragma once
 #include "public.sdk/source/vst/vsteditcontroller.h"
-#include "vstgui/plugin-bindings/vst3editor.h"
-#include "vstgui/uidescription/uidescription.h"
-#include "vstgui/uidescription/uiattributes.h"
+
+namespace VSTGUI { class CView; class VST3Editor; class IUIDescription; class UIAttributes; using UTF8StringPtr = const char*; }
 
 namespace UglyReverb {
 
