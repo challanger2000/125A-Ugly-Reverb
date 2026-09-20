@@ -75,7 +75,7 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(const char* name)
 {
     Steinberg::ConstString viewName(name);
     if (viewName == Steinberg::Vst::ViewType::kEditor)
-        return new VSTGUI::VST3Editor(this, "view", "ugly_reverb.uidesc");
+        {\n        auto* editor = new VSTGUI::VST3Editor(this, "view", "ugly_reverb.uidesc");\n        editor->setAllowedZoomFactors({1.0, 1.25, 1.5, 1.75, 2.0});\n        return editor;\n    }
     return nullptr;
 }
 
