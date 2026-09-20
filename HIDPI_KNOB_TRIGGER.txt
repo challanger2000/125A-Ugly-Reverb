@@ -1,1 +1,0 @@
-Trigger HiDPI knob verification build.
