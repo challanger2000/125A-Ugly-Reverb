@@ -95,10 +95,10 @@ smtg_target_add_plugin_resources(UglyReverb
     resource/fender_amp1.png
     "${UGLY_GENERATED_RESOURCE_DIR}/ugly_wear_overlay.png"
     "${UGLY_GENERATED_RESOURCE_DIR}/ugly_glass_overlay.png"
-    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_66.png"
-    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_66#2.0x.png"
-    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_66.png"
-    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_66#2.0x.png"
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_62.png"
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_62#2.0x.png"
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_64.png"
+    "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_64#2.0x.png"
     "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_66.png"
     "${UGLY_GENERATED_RESOURCE_DIR}/ugly_knob_66#2.0x.png"
 )
