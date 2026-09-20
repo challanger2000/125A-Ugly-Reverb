@@ -79,6 +79,7 @@ smtg_target_add_plugin_resources(UglyReverb
   RESOURCES
     resource/ugly_reverb.uidesc
     resource/125A_Logo_Master_FINAL.svg
+    resource/Old_amp_black_01.png
     "${UGLY_GENERATED_RESOURCE_DIR}/ugly_wear_overlay.png"
     "${UGLY_GENERATED_RESOURCE_DIR}/ugly_glass_overlay.png"
 )
