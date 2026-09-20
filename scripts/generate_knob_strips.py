@@ -53,25 +53,27 @@ def read_png(path):
         prev=cur
     return w,h,out
 
-def resize_frame(src,sw,sh,dw,dh,src_y):
+def resize_frame(src,canvas_w,frame_w,frame_h,dw,dh,src_x,src_y):
     out=bytearray(dw*dh*4)
     for y in range(dh):
-        fy=(y+0.5)*sh/dh-0.5
+        fy=(y+0.5)*frame_h/dh-0.5
         ybase=math.floor(fy)
-        y0=max(0,min(sh-1,int(ybase)))
-        y1=min(sh-1,y0+1)
+        y0=max(0,min(frame_h-1,int(ybase)))
+        y1=min(frame_h-1,y0+1)
         wy=fy-ybase
         for x in range(dw):
-            fx=(x+0.5)*sw/dw-0.5
+            fx=(x+0.5)*frame_w/dw-0.5
             xbase=math.floor(fx)
-            x0=max(0,min(sw-1,int(xbase)))
-            x1=min(sw-1,x0+1)
+            x0=max(0,min(frame_w-1,int(xbase)))
+            x1=min(frame_w-1,x0+1)
             wx=fx-xbase
             for ch in range(4):
-                p00=src[((src_y+y0)*sw+x0)*4+ch]
-                p10=src[((src_y+y0)*sw+x1)*4+ch]
-                p01=src[((src_y+y1)*sw+x0)*4+ch]
-                p11=src[((src_y+y1)*sw+x1)*4+ch]
+                def px(xx,yy):
+                    return src[(((src_y+yy)*canvas_w)+(src_x+xx))*4+ch]
+                p00=px(x0,y0)
+                p10=px(x1,y0)
+                p01=px(x0,y1)
+                p11=px(x1,y1)
                 v=(p00*(1-wx)+p10*wx)*(1-wy)+(p01*(1-wx)+p11*wx)*wy
                 out[(y*dw+x)*4+ch]=max(0,min(255,round(v)))
     return out
@@ -94,16 +96,25 @@ def write_png(path,w,h,pix):
 
 def make(master,out_dir):
     sw,sh,src=read_png(master)
-    if (sw,sh)!=(125,12625):
-        raise ValueError(f"Unexpected master strip size {sw}x{sh}; expected 125x12625")
     frames=101
+    if (sw,sh)==(125,125*frames):
+        orientation="vertical"
+    elif (sw,sh)==(125*frames,125):
+        orientation="horizontal"
+    else:
+        raise ValueError(
+            f"Unexpected master strip size {sw}x{sh}; expected 125x{125*frames} or {125*frames}x125"
+        )
+    print(f"Detected {orientation} master strip: {sw}x{sh}")
     os.makedirs(out_dir,exist_ok=True)
     for logical in (54,56,58):
         for scale in (1,2):
             d=logical*scale
             strip=bytearray(d*d*frames*4)
             for frame in range(frames):
-                fr=resize_frame(src,125,125,d,d,frame*125)
+                src_x=frame*125 if orientation=="horizontal" else 0
+                src_y=frame*125 if orientation=="vertical" else 0
+                fr=resize_frame(src,sw,125,125,d,d,src_x,src_y)
                 rowbytes=d*4
                 for y in range(d):
                     dst=((frame*d+y)*d)*4
