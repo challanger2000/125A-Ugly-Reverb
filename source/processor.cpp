@@ -333,12 +333,15 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             fb += smClang_ * clangShape[mat][i] * clangDepth;
             fb = std::max(0.20f, std::min(0.991f, fb));
 
-            const float drive = 1.f + smMetal_ * 1.9f + smClang_ * 1.4f;
-            // Do not normalise the deliberate ugliness back out.  sqrt(drive) keeps
-            // the loop bounded while allowing high METAL/CLANG to become audibly fierce.
-            const float driveNorm = std::sqrt(drive);
-            const float writeL = std::tanh((exciteL * (0.20f + 0.055f * i) + fL * fb) * drive) / driveNorm;
-            const float writeR = std::tanh((exciteR * (0.20f + 0.055f * i) + fR * fb) * drive) / driveNorm;
+            // Drive the excitation hard, but never multiply the feedback-loop slope.
+            // This keeps the tail mathematically decaying while still letting METAL/CLANG
+            // hit the network like an overloaded early-digital input stage.
+            const float drive = 1.f + smMetal_ * 2.2f + smClang_ * 1.6f;
+            const float injectGain = 0.20f + 0.055f * i;
+            const float drivenL = std::tanh(exciteL * injectGain * drive);
+            const float drivenR = std::tanh(exciteR * injectGain * drive);
+            const float writeL = std::tanh(drivenL + fL * fb);
+            const float writeR = std::tanh(drivenR + fR * fb);
 
             combL_[i].push(processDigital(writeL));
             combR_[i].push(processDigital(writeR));
