@@ -219,8 +219,23 @@ UglyToggle::UglyToggle(const UglyToggle& o):COnOffButton(o),off_(o.off_),on_(o.o
 void UglyToggle::draw(VSTGUI::CDrawContext* c)
 {
     const auto r=getViewSize();
+    const bool on=getValueNormalized()>=0.5;
     c->setDrawMode(VSTGUI::kAntiAliasing);
-    drawScaledBitmap(c,getValueNormalized()>=0.5?on_:off_,r);
+
+    // The generated OFF/ON masters do not use the same transparent framing.
+    // Crop to the actual visible hardware in each embedded 60x60 bitmap, then
+    // render both states into the same physical envelope so the switch cannot
+    // jump or clip when toggled.
+    VSTGUI::CRect dst=r;
+    dst.inset(4.0,4.0);
+    const VSTGUI::CRect src = on
+        ? VSTGUI::CRect(1.0,3.0,44.0,57.0)
+        : VSTGUI::CRect(0.0,2.0,60.0,58.0);
+
+    auto* bitmap=on?on_:off_;
+    if(bitmap && bitmap->isLoaded())
+        c->fillRectWithBitmap(bitmap,src,dst,1.f);
+
     setDirty(false);
 }
 
