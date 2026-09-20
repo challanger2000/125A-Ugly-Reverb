@@ -11,9 +11,15 @@
     <color name="Accent" rgba="#8d826cff"/>
     <color name="Marker" rgba="#171613ff"/>
   </colors>
+  <bitmaps>
+    <bitmap name="KnobMaster" path="ugly_reverb_knob_master.png"/>
+    <bitmap name="ToggleOff" path="ugly_reverb_toggle_off.png"/>
+    <bitmap name="ToggleOn" path="ugly_reverb_toggle_on.png"/>
+  </bitmaps>
   <template background-color="Panel" class="CViewContainer" maxSize="760, 430" minSize="760, 430" mouse-enabled="true" name="view" opacity="1" origin="0, 0" size="760, 430" transparent="false">
     <view class="CView" custom-view-name="Faceplate" origin="0, 0" size="760, 430" mouse-enabled="false"/>
-    <view back-color="Panel2" class="CTextLabel" font="~ NormalFontBig" font-color="Text" frame-color="Edge" frame-width="1" origin="20, 15" size="720, 38" title="125A AUDIO SOFTWARE     UGLY REVERB" transparent="false" text-alignment="left"/>
+    <view class="CView" custom-view-name="BrandLogo" origin="24, 10" size="94, 47" mouse-enabled="false"/>
+    <view back-color="Panel" class="CTextLabel" font="~ NormalFontBig" font-color="Text" frame-width="0" origin="136, 16" size="260, 32" title="UGLY REVERB" transparent="true" text-alignment="left"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted" frame-width="0" origin="24, 62" size="330, 18" title="SPACE / MATERIAL" transparent="true" text-alignment="left"/>
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted" frame-width="0" origin="384, 62" size="235, 18" title="UGLY NETWORK" transparent="true" text-alignment="left"/>
