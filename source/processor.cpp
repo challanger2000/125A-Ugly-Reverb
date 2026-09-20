@@ -268,7 +268,11 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         smOutput_ += smoothCoef * (output_ - smOutput_);
 
         const float outGain = std::pow(10.f, ((smOutput_ * 24.f) - 12.f) / 20.f);
-        const float wet = smMix_;
+
+        // The reverb core is intentionally aggressive, so a linear wet/dry mapping
+        // makes low Mix values jump in far too quickly.  Shape only the mix control:
+        // 10% -> 1% wet, 25% -> 6.25%, 50% -> 25%, 100% -> 100%.
+        const float wet = smMix_ * smMix_;
         const float dry = 1.f - wet;
 
         const float preSamples = std::max(0.f, std::min((float)preL_.size() - 2.f,
