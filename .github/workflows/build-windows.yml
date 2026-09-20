@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [development]
-    paths: [.github/workflows/build-windows.yml]
+    paths: [.github/workflows/build-windows.yml, DIGITAL_BUILD_TRIGGER.txt]
 
 jobs:
   build:
