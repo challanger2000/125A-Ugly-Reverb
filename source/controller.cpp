@@ -86,13 +86,19 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(const char* name)
 }
 
 VSTGUI::CView* Controller::createCustomView(VSTGUI::UTF8StringPtr name,
-    const VSTGUI::UIAttributes& a,const VSTGUI::IUIDescription*,VSTGUI::VST3Editor* e)
+    const VSTGUI::UIAttributes& a,const VSTGUI::IUIDescription* d,VSTGUI::VST3Editor* e)
 {
-    if(!name||!e) return nullptr;
+    if(!name||!e||!d) return nullptr;
     VSTGUI::CPoint o{0,0},s{60,60}; a.getPointAttribute("origin",o); a.getPointAttribute("size",s);
     VSTGUI::CRect r(o.x,o.y,o.x+s.x,o.y+s.y);
     if(std::strcmp(name,"Faceplate")==0) return new UglyFaceplate(r);
-    auto knob=[&](const char* n,ParamID id)->VSTGUI::CView*{return std::strcmp(name,n)==0?new UglyKnob(r,e,id):nullptr;};
+    if(std::strcmp(name,"BrandLogo")==0) return new UglyLogo(r);
+    auto* knobBody=d->getBitmap("KnobMaster");
+    auto* toggleOff=d->getBitmap("ToggleOff");
+    auto* toggleOn=d->getBitmap("ToggleOn");
+    auto knob=[&](const char* n,ParamID id)->VSTGUI::CView*{
+        return std::strcmp(name,n)==0?new UglyKnob(r,e,id,knobBody):nullptr;
+    };
     if(auto*v=knob("Material",kMaterial))return v; if(auto*v=knob("Size",kSize))return v;
     if(auto*v=knob("Decay",kDecay))return v; if(auto*v=knob("PreDelay",kPreDelay))return v;
     if(auto*v=knob("Diffusion",kDiffusion))return v; if(auto*v=knob("Damping",kDamping))return v;
@@ -100,7 +106,7 @@ VSTGUI::CView* Controller::createCustomView(VSTGUI::UTF8StringPtr name,
     if(auto*v=knob("Clang",kClang))return v; if(auto*v=knob("Rattle",kRattle))return v;
     if(auto*v=knob("Width",kWidth))return v; if(auto*v=knob("Digital",kDigital))return v;
     if(auto*v=knob("Mix",kMix))return v; if(auto*v=knob("Output",kOutput))return v;
-    if(std::strcmp(name,"Bypass")==0) return new UglyToggle(r,e,kBypass);
+    if(std::strcmp(name,"Bypass")==0) return new UglyToggle(r,e,kBypass,toggleOff,toggleOn);
     return nullptr;
 }
 
