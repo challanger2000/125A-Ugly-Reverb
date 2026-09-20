@@ -12,7 +12,7 @@ tresult PLUGIN_API Controller::initialize(FUnknown* context)
     auto r = EditControllerEx1::initialize(context);
     if (r != kResultOk) return r;
 
-    parameters.addParameter(STR16("Material"), nullptr, 2, 0.0, ParameterInfo::kCanAutomate, kMaterial);
+    parameters.addParameter(STR16("Material"), nullptr, 5, 0.0, ParameterInfo::kCanAutomate, kMaterial);
     parameters.addParameter(STR16("Size"), nullptr, 0, 0.55, ParameterInfo::kCanAutomate, kSize);
     parameters.addParameter(STR16("Decay"), nullptr, 0, 0.58, ParameterInfo::kCanAutomate, kDecay);
     parameters.addParameter(STR16("Pre-Delay"), nullptr, 0, 0.08, ParameterInfo::kCanAutomate, kPreDelay);
