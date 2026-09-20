@@ -3,6 +3,7 @@
 
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "public.sdk/source/common/memorystream.h"
+#include "public.sdk/source/vst/hosting/parameterchanges.h"
 
 #include <algorithm>
 #include <cmath>
@@ -300,6 +301,60 @@ int main()
         require(restored.getState(&roundtrip)==kResultOk, "Restored state serializes again", failures);
         restored.terminate();
         p.terminate();
+
+        // VST3 automation points must take effect at their exact sample offset.
+        {
+            Processor automated;
+            automated.initialize(nullptr);
+            ProcessSetup setup {};
+            setup.processMode = kRealtime;
+            setup.symbolicSampleSize = kSample32;
+            setup.maxSamplesPerBlock = 128;
+            setup.sampleRate = 48000.0;
+            automated.setupProcessing(setup);
+            automated.setActive(true);
+
+            float inL[128], inR[128], outL[128] {}, outR[128] {};
+            std::fill(std::begin(inL), std::end(inL), 0.25f);
+            std::fill(std::begin(inR), std::end(inR), 0.25f);
+            float* inPtrs[2] = {inL, inR};
+            float* outPtrs[2] = {outL, outR};
+
+            AudioBusBuffers inBus {};
+            inBus.numChannels = 2;
+            inBus.channelBuffers32 = inPtrs;
+            AudioBusBuffers outBus {};
+            outBus.numChannels = 2;
+            outBus.channelBuffers32 = outPtrs;
+
+            ParameterChanges changes(1);
+            int32 queueIndex = 0;
+            auto* q = changes.addParameterData(UglyReverb::kBypass, queueIndex);
+            int32 point = 0;
+            q->addPoint(64, 1.0, point);
+
+            ProcessData data {};
+            data.processMode = kRealtime;
+            data.symbolicSampleSize = kSample32;
+            data.numSamples = 128;
+            data.numInputs = 1;
+            data.numOutputs = 1;
+            data.inputs = &inBus;
+            data.outputs = &outBus;
+            data.inputParameterChanges = &changes;
+
+            require(automated.process(data) == kResultOk,
+                    "Mid-block parameter automation processes successfully", failures);
+            require(std::fabs(outL[63] - 0.25f) > 1e-5f,
+                    "Bypass is still off immediately before automation offset", failures);
+            require(outL[64] == 0.25f && outR[64] == 0.25f,
+                    "Bypass automation takes effect at exact sample offset", failures);
+            require(outL[127] == 0.25f && outR[127] == 0.25f,
+                    "Bypass remains exact after automated transition", failures);
+
+            automated.setActive(false);
+            automated.terminate();
+        }
 
         // Bypass must be exact for a one-sample impulse.
         auto bypass=render(48000.0,0.1,0.5f,0.f,0.f,true,true);
