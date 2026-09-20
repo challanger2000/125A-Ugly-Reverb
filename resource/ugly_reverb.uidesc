@@ -12,6 +12,7 @@
 
   <template background-color="Background" class="CViewContainer" maxSize="760, 430" minSize="760, 430" mouse-enabled="true" name="view" opacity="1" origin="0, 0" size="760, 430" transparent="false">
     <view class="CView" custom-view-name="Faceplate" origin="0, 0" size="760, 430" mouse-enabled="false"/>
+    <view class="CView" custom-view-name="WearOverlay" origin="0, 0" size="760, 430" mouse-enabled="false" transparent="true"/>
     <view class="CView" custom-view-name="BrandLogo" origin="20, 9" size="86, 43" mouse-enabled="false"/>
     <view back-color="Background" class="CTextLabel" font="~ NormalFontBig" font-color="Text" frame-width="0" origin="250, 9" size="260, 28" title="UGLY REVERB" transparent="true" text-alignment="center"/>
     <view back-color="Background" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted" frame-width="0" origin="220, 36" size="320, 16" title="CHARACTER REVERB / CONTROLLED WRONGNESS" transparent="true" text-alignment="center"/>
