@@ -284,14 +284,16 @@ VSTGUI::CMouseEventResult UglySelector::onMouseDown(VSTGUI::CPoint& where,
     return VSTGUI::kMouseDownEventHandledButDontNeedMovedOrUpEvents;
 }
 
-UglyToggle::UglyToggle(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag)
-: VSTGUI::COnOffButton(r,l,tag,nullptr)
+UglyToggle::UglyToggle(const VSTGUI::CRect& r,VSTGUI::IControlListener* l,int32_t tag,
+                       VSTGUI::CBitmap* offBitmap,VSTGUI::CBitmap* onBitmap)
+: VSTGUI::COnOffButton(r,l,tag,nullptr),off_(offBitmap),on_(onBitmap)
 {
     setTransparency(true);
     setWantsFocus(true);
 }
 
-UglyToggle::UglyToggle(const UglyToggle& o):VSTGUI::COnOffButton(o) {}
+UglyToggle::UglyToggle(const UglyToggle& o)
+: VSTGUI::COnOffButton(o),off_(o.off_),on_(o.on_) {}
 
 void UglyToggle::draw(VSTGUI::CDrawContext* c)
 {
@@ -299,47 +301,18 @@ void UglyToggle::draw(VSTGUI::CDrawContext* c)
     const bool on=getValueNormalized()>=0.5;
     c->setDrawMode(VSTGUI::kAntiAliasing);
 
-    // Recessed switch plate.
-    VSTGUI::CRect plate=r;
-    plate.inset(6.0,7.0);
-    c->setFillColor({12,12,11,255});
-    c->drawRect(plate,VSTGUI::kDrawFilled);
-    c->setFrameColor({91,84,70,220});
-    c->setLineWidth(1.0);
-    c->drawRect(plate,VSTGUI::kDrawStroked);
-
-    // Fixed pivot and metal bezel: geometry never changes between states.
-    const auto p=plate.getCenter();
-    const double bezelR=11.0;
-    c->setFillColor({72,68,60,255});
-    c->drawEllipse({p.x-bezelR,p.y-bezelR,p.x+bezelR,p.y+bezelR},VSTGUI::kDrawFilled);
-    c->setFrameColor({152,143,123,210});
-    c->drawEllipse({p.x-bezelR,p.y-bezelR,p.x+bezelR,p.y+bezelR},VSTGUI::kDrawStroked);
-
-    c->setFillColor({28,27,24,255});
-    c->drawEllipse({p.x-5.0,p.y-5.0,p.x+5.0,p.y+5.0},VSTGUI::kDrawFilled);
-
-    // Lever pivots around the same centre; only the tip position changes.
-    const double tipX=p.x+(on?9.0:-9.0);
-    const double tipY=p.y+(on?-11.0:11.0);
-    c->setFrameColor({197,185,157,255});
-    c->setLineWidth(5.0);
-    c->drawLine({p.x,p.y},{tipX,tipY});
-    c->setFrameColor({78,72,61,255});
-    c->setLineWidth(1.0);
-    c->drawLine({p.x+1.0,p.y+1.0},{tipX+1.0,tipY+1.0});
-    c->setFillColor({222,208,174,255});
-    c->drawEllipse({tipX-4.5,tipY-4.5,tipX+4.5,tipY+4.5},VSTGUI::kDrawFilled);
-    c->setFrameColor({92,83,67,255});
-    c->drawEllipse({tipX-4.5,tipY-4.5,tipX+4.5,tipY+4.5},VSTGUI::kDrawStroked);
-
-    // Small status lamp, intentionally subtle.
-    VSTGUI::CRect led(plate.right-10.0,plate.top+3.0,plate.right-4.0,plate.top+9.0);
-    c->setFillColor(on?VSTGUI::CColor{170,118,43,255}:VSTGUI::CColor{45,34,20,255});
-    c->drawEllipse(led,VSTGUI::kDrawFilled);
-    c->setFrameColor({13,12,10,255});
-    c->drawEllipse(led,VSTGUI::kDrawStroked);
-
+    auto* bitmap=on?on_:off_;
+    if(bitmap && bitmap->isLoaded()) {
+        // The original 887x887 PNG states use different framing.
+        // These source windows are derived from feature registration of the
+        // common metal socket. They preserve one mechanical pivot and scale.
+        const VSTGUI::CRect src = on
+            ? VSTGUI::CRect(4.716,91.062,698.528,784.875)
+            : VSTGUI::CRect(147.0,85.0,847.0,785.0);
+        VSTGUI::CRect dst=r;
+        dst.inset(2.0,1.0);
+        c->fillRectWithBitmap(bitmap,src,dst,1.f);
+    }
     setDirty(false);
 }
 
