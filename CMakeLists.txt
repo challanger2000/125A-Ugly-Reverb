@@ -45,8 +45,6 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/source/branding_master.h.in" "${CMAK
 
 
 smtg_add_vst3plugin(UglyReverb
-  PACKAGE_NAME "125A Ugly Reverb"
-  SOURCES_LIST
   source/version.h
   source/ids.h
   source/parameters.h
