@@ -429,15 +429,15 @@ void UglyToggle::draw(VSTGUI::CDrawContext* c)
     setDirty(false);
 }
 
-UglyZoomControl::UglyZoomControl(const VSTGUI::CRect& r,VSTGUI::VST3Editor* editor)
-: VSTGUI::CControl(r,nullptr,-1,nullptr),editor_(editor)
+UglyZoomControl::UglyZoomControl(const VSTGUI::CRect& r,VSTGUI::VST3Editor* editor,int* zoomIndex)
+: VSTGUI::CControl(r,nullptr,-1,nullptr),editor_(editor),zoomIndex_(zoomIndex)
 {
     setTransparency(true);
     setWantsFocus(true);
 }
 
 UglyZoomControl::UglyZoomControl(const UglyZoomControl& o)
-: VSTGUI::CControl(o),editor_(o.editor_) {}
+: VSTGUI::CControl(o),editor_(o.editor_),zoomIndex_(o.zoomIndex_) {}
 
 void UglyZoomControl::draw(VSTGUI::CDrawContext* c)
 {
@@ -481,6 +481,7 @@ VSTGUI::CMouseEventResult UglyZoomControl::onMouseDown(
 
     const bool plus=where.x>=getViewSize().getCenter().x;
     index=std::clamp(index+(plus?1:-1),0,4);
+    if (zoomIndex_) *zoomIndex_=index;
     editor_->setZoomFactor(zooms[index]);
     invalid();
     return VSTGUI::kMouseDownEventHandledButDontNeedMovedOrUpEvents;
